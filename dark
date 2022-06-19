@@ -1,0 +1,177 @@
+#!/usr/bin/python3 
+
+from telethon import TelegramClient 
+import sys 
+import os 
+from tqdm.auto import tqdm 
+from time import sleep
+import argparse
+import inquirer
+from telethon.sessions import StringSession 
+import config 
+
+""" Get api id and hash from https://my.telegram.org """ 
+
+if os.path.exists(config.fullpath):
+
+    config.parser.read(config.fullpath) 
+    api_id = config.parser.get('dark-send','api_id') 
+    api_hash = config.parser.get('dark-send','api_hash') 
+    string = config.parser.get('dark-send','string_session') 
+
+else:
+    config.generate_conf() 
+    config.parser.read(config.fullpath) 
+    api_id = config.parser.get('dark-send','api_id') 
+    api_hash = config.parser.get('dark-send','api_hash') 
+    string = config.parser.get('dark-send','string_session') 
+
+client = TelegramClient(StringSession(string), api_id, api_hash) 
+num = [] 
+dif = 0 
+
+def percentage(part,whole): 
+    tmp = 100 * float(part)/float(whole)
+    return round(tmp,0)
+
+async def display_list():
+    
+    global client 
+    id = {}
+    async for dialog in client.iter_dialogs(15):
+        id[dialog.name] = dialog.id
+
+    dist = []
+    for key in id.keys():
+        tmp = {}
+        tmp['name'] = key
+        dist.append(tmp)
+
+    questions = [
+    {
+    'type': 'checkbox',
+    'message': 'Select chat',
+    'name': 'Chats',
+    'choices': dist,
+    'validate': lambda answer: 'Choose atleast one chat' \
+            if len(answer) == 0 else True
+            }
+    ]
+
+    answers = inquirer.prompt(questions,style=inquirer.style)
+    chats = []
+    for val in answers.values():
+        for answer in val:
+            chats.append(answer)
+    return chats
+
+def progress(current,total):
+      # print('Uploaded', current, 'out of', total,
+      #      'bytes: {:.2%}'.format(current / total)) 
+      bar_count = percentage(current,total) 
+      global num
+      global dif
+      if not bar_count in num:
+          if not num:
+              dif = bar_count
+              for i in range(int(dif)):
+                  pbar.update(1) 
+                  # sleep(0.00001) 
+              num.append(bar_count)
+              if bar_count == 100: 
+                  pbar.close() 
+                  dif = 0
+                  num = []
+                  return 
+          else:
+              for i in range(int(bar_count - dif)):
+                  pbar.update(1)
+                  # sleep(0.00001)
+              dif = bar_count 
+              num.append(bar_count)
+              if bar_count == 100: 
+                  pbar.close() 
+                  dif = 0
+                  num = []
+                  return 
+          
+async def main(): 
+
+    parser = argparse.ArgumentParser(description='command line telegram client') 
+    parser.add_argument('message', type=str,help="the message you would like to send",nargs="*") 
+    parser.add_argument('-v','--video',type=str,nargs="+") 
+    parser.add_argument('-i','--image',type=str,nargs="+") 
+    parser.add_argument('-f','--file',type=str,nargs="+") 
+    parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
+
+    args = parser.parse_args() 
+    if args.message:
+        chats = await display_list() 
+        for message in args.message: 
+            for chat in chats:
+                await client.send_message(chat,message)
+
+    elif args.video:
+        if not args.album:
+            chats = await display_list() 
+            for video in args.video: 
+                for chat in chats:
+                    global pbar 
+                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                    await client.send_file(chat,video,video=True,progress_callback=progress) 
+                    del pbar 
+        else:
+            chats = await display_list()
+            files_uploaded = []
+
+            for file in args.video:
+                pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                files_uploaded.append(await client.upload_file(file,progress_callback=progress))
+                del pbar
+
+            for chat in chats:
+                await client.send_file(chat,files_uploaded,video=True)
+
+
+    elif args.image:
+        if not args.album:
+            chats = await display_list()
+            for image in args.image:
+                for chat in chats:
+                    await client.send_file(chat,image,image=True) 
+        else:
+            chats = await display_list()
+            files_uploaded = []
+
+            for file in args.image:
+                pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                files_uploaded.append(await client.upload_file(file,progress_callback=progress))
+                del pbar
+
+            for chat in chats:
+                await client.send_file(chat,files_uploaded,image=True)
+
+
+    elif args.file:
+        if not args.album:
+            chats = await display_list()
+            for file in args.file:
+                for chat in chats:
+                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                    await client.send_file(chat,file,force_document=True,progress_callback=progress) 
+                    del pbar
+        else: 
+            chats = await display_list()
+            files_uploaded = []
+
+            for file in args.file:
+                pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                files_uploaded.append(await client.upload_file(file,progress_callback=progress))
+                del pbar
+
+            for chat in chats:
+                await client.send_file(chat,files_uploaded,force_document=True)
+
+
+with client:
+    client.loop.run_until_complete(main())
