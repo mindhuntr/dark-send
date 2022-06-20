@@ -59,11 +59,12 @@ async def display_list():
     ]
 
     answers = inquirer.prompt(questions,style=inquirer.style)
-    chats = []
+    peers = []
     for val in answers.values():
         for answer in val:
-            chats.append(answer)
-    return chats
+            peers.append(id[answer]) 
+
+        return peers
 
 def progress(current,total):
       # print('Uploaded', current, 'out of', total,
