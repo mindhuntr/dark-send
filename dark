@@ -34,11 +34,14 @@ def percentage(part,whole):
     tmp = 100 * float(part)/float(whole)
     return round(tmp,0)
 
-async def display_list():
-    
+async def display_list(no_chats):
+
+    if not no_chats:
+        no_chats = 15
+
     global client 
     id = {}
-    async for dialog in client.iter_dialogs(15):
+    async for dialog in client.iter_dialogs(no_chats):
         id[dialog.name] = dialog.id
 
     dist = []
@@ -103,18 +106,19 @@ async def main():
     parser.add_argument('-v','--video',type=str,nargs="+") 
     parser.add_argument('-i','--image',type=str,nargs="+") 
     parser.add_argument('-f','--file',type=str,nargs="+") 
+    parser.add_argument('-n','--nchats',type=int,nargs="?",help="no chats to display") 
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
 
     args = parser.parse_args() 
     if args.message:
-        chats = await display_list() 
+        chats = await display_list(args.nchats)  
         for message in args.message: 
             for chat in chats:
                 await client.send_message(chat,message)
 
     elif args.video:
         if not args.album:
-            chats = await display_list() 
+            chats = await display_list(args.nchats)  
             for video in args.video: 
                 for chat in chats:
                     global pbar 
@@ -122,7 +126,7 @@ async def main():
                     await client.send_file(chat,video,video=True,progress_callback=progress) 
                     del pbar 
         else:
-            chats = await display_list()
+            chats = await display_list(args.nchats) 
             files_uploaded = []
 
             for file in args.video:
@@ -136,12 +140,12 @@ async def main():
 
     elif args.image:
         if not args.album:
-            chats = await display_list()
+            chats = await display_list(args.nchats) 
             for image in args.image:
                 for chat in chats:
                     await client.send_file(chat,image,image=True) 
         else:
-            chats = await display_list()
+            chats = await display_list(args.nchats) 
             files_uploaded = []
 
             for file in args.image:
@@ -155,14 +159,14 @@ async def main():
 
     elif args.file:
         if not args.album:
-            chats = await display_list()
+            chats = await display_list(args.nchats) 
             for file in args.file:
                 for chat in chats:
                     pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
                     await client.send_file(chat,file,force_document=True,progress_callback=progress) 
                     del pbar
         else: 
-            chats = await display_list()
+            chats = await display_list(args.nchats) 
             files_uploaded = []
 
             for file in args.file:
