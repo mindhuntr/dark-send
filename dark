@@ -34,7 +34,7 @@ def percentage(part,whole):
     tmp = 100 * float(part)/float(whole)
     return round(tmp,0)
 
-async def display_list(no_chats):
+async def display_list(no_chats,chats):
 
     if not no_chats:
         no_chats = 15
@@ -43,6 +43,13 @@ async def display_list(no_chats):
     id = {}
     async for dialog in client.iter_dialogs(no_chats):
         id[dialog.name] = dialog.id
+
+    if chats:
+        peers = []
+        for chat in chats:
+            peers.append(id[chat])
+
+        return peers
 
     dist = []
     for key in id.keys():
@@ -107,32 +114,41 @@ async def main():
     parser.add_argument('-i','--image',type=str,nargs="+") 
     parser.add_argument('-f','--file',type=str,nargs="+") 
     parser.add_argument('-n','--nchats',type=int,nargs="?",help="no chats to display") 
+    parser.add_argument('-c','--chats',type=str,nargs="*",help="name of the chat") 
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
+    parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
 
     args = parser.parse_args() 
     if args.message:
-        chats = await display_list(args.nchats)  
+        chats = await display_list(args.nchats,args.chats)  
         for message in args.message: 
             for chat in chats:
                 await client.send_message(chat,message)
 
     elif args.video:
         if not args.album:
-            chats = await display_list(args.nchats)  
+            chats = await display_list(args.nchats,args.chats)  
             for video in args.video: 
                 for chat in chats:
-                    global pbar 
-                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                    await client.send_file(chat,video,video=True,progress_callback=progress) 
-                    del pbar 
+                    if not args.quiet:
+                        global pbar 
+                        pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                        await client.send_file(chat,video,video=True,progress_callback=progress) 
+                        del pbar 
+                    else:
+                        await client.send_file(chat,video,video=True) 
+
         else:
-            chats = await display_list(args.nchats) 
+            chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
 
             for file in args.video:
-                pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                files_uploaded.append(await client.upload_file(file,progress_callback=progress))
-                del pbar
+                if not args.quiet:
+                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                    files_uploaded.append(await client.upload_file(file,progress_callback=progress))
+                    del pbar
+                else:
+                    files_uploaded.append(await client.upload_file(file))
 
             for chat in chats:
                 await client.send_file(chat,files_uploaded,video=True)
@@ -140,18 +156,19 @@ async def main():
 
     elif args.image:
         if not args.album:
-            chats = await display_list(args.nchats) 
+            chats = await display_list(args.nchats,args.chats) 
             for image in args.image:
                 for chat in chats:
                     await client.send_file(chat,image,image=True) 
         else:
-            chats = await display_list(args.nchats) 
+            chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
 
             for file in args.image:
-                pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                files_uploaded.append(await client.upload_file(file,progress_callback=progress))
-                del pbar
+                if not args.quiet:
+                    files_uploaded.append(await client.upload_file(file,progress_callback=progress))
+                else:
+                    files_uploaded.append(await client.upload_file(file))
 
             for chat in chats:
                 await client.send_file(chat,files_uploaded,image=True)
@@ -159,20 +176,27 @@ async def main():
 
     elif args.file:
         if not args.album:
-            chats = await display_list(args.nchats) 
+            chats = await display_list(args.nchats,args.chats) 
             for file in args.file:
                 for chat in chats:
-                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                    await client.send_file(chat,file,force_document=True,progress_callback=progress) 
-                    del pbar
+                    if not args.quiet:
+                        pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                        await client.send_file(chat,file,force_document=True,progress_callback=progress) 
+                        del pbar
+                    else:
+                        await client.send_file(chat,file,force_document=True) 
+
         else: 
-            chats = await display_list(args.nchats) 
+            chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
 
             for file in args.file:
-                pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                files_uploaded.append(await client.upload_file(file,progress_callback=progress))
-                del pbar
+                if not args.quiet:
+                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
+                    files_uploaded.append(await client.upload_file(file,progress_callback=progress))
+                    del pbar
+                else:
+                    files_uploaded.append(await client.upload_file(file))
 
             for chat in chats:
                 await client.send_file(chat,files_uploaded,force_document=True)
