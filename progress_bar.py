@@ -68,7 +68,6 @@ def bar_func():
    
     global no_iter
     global flag
-    fl_per = 0 
 
 #    with alive_bar(100,title='Uploading') as bar: 
 #        while True: 
@@ -90,9 +89,7 @@ def bar_func():
                 break
 
             if flag == True: 
-                fl_per += 0.1
-                fl_per = round(fl_per,1) 
-                bar.update(upload_task,advance=fl_per)
+                bar.advance(upload_task)
                 no_iter += 1
                 flag = False
 
