@@ -59,8 +59,7 @@ def progress(current,total):
                       while True:
                           flag = True
 
-                  prev_count,no_thread = 0, 0 
-                  num_arr = []
+                  prev_count = 0 
                   return
 
 
