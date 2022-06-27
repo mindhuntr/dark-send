@@ -3,12 +3,11 @@
 from telethon import TelegramClient 
 import sys 
 import os 
-from tqdm.auto import tqdm 
-from time import sleep
 import argparse
 import inquirer
 from telethon.sessions import StringSession 
 import config 
+import progress_bar 
 
 """ Get api id and hash from https://my.telegram.org """ 
 
@@ -27,12 +26,6 @@ else:
     string = config.parser.get('dark-send','string_session') 
 
 client = TelegramClient(StringSession(string), api_id, api_hash) 
-num = [] 
-dif = 0 
-
-def percentage(part,whole): 
-    tmp = 100 * float(part)/float(whole)
-    return round(tmp,0)
 
 async def display_list(no_chats,chats):
 
@@ -79,35 +72,6 @@ async def display_list(no_chats,chats):
 
         return peers
 
-def progress(current,total):
-      # print('Uploaded', current, 'out of', total,
-      #      'bytes: {:.2%}'.format(current / total)) 
-      bar_count = percentage(current,total) 
-      global num
-      global dif
-      if not bar_count in num:
-          if not num:
-              dif = bar_count
-              for i in range(int(dif)):
-                  pbar.update(1) 
-                  # sleep(0.00001) 
-              num.append(bar_count)
-              if bar_count == 100: 
-                  pbar.close() 
-                  dif = 0
-                  num = []
-                  return 
-          else:
-              for i in range(int(bar_count - dif)):
-                  pbar.update(1)
-                  # sleep(0.00001)
-              dif = bar_count 
-              num.append(bar_count)
-              if bar_count == 100: 
-                  pbar.close() 
-                  dif = 0
-                  num = []
-                  return 
           
 async def main(): 
 
@@ -121,35 +85,34 @@ async def main():
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
     parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
 
+    chats = [] 
     args = parser.parse_args() 
     if args.message:
-        chats = await display_list(args.nchats,args.chats)  
+        if not chats:
+            chats = await display_list(args.nchats,args.chats)  
         for message in args.message: 
             for chat in chats:
                 await client.send_message(chat,message)
 
-    elif args.video:
+    if args.video:
         if not args.album:
-            chats = await display_list(args.nchats,args.chats)  
+            if not chats:
+                chats = await display_list(args.nchats,args.chats)  
             for video in args.video: 
                 for chat in chats:
                     if not args.quiet:
-                        global pbar 
-                        pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                        await client.send_file(chat,video,video=True,progress_callback=progress) 
-                        del pbar 
+                        await client.send_file(chat,video,video=True,progress_callback=progress_bar.progress) 
                     else:
                         await client.send_file(chat,video,video=True) 
 
         else:
-            chats = await display_list(args.nchats,args.chats) 
+            if not chats:
+                chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
 
             for file in args.video:
                 if not args.quiet:
-                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                    files_uploaded.append(await client.upload_file(file,progress_callback=progress))
-                    del pbar
+                    files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
                 else:
                     files_uploaded.append(await client.upload_file(file))
 
@@ -157,19 +120,21 @@ async def main():
                 await client.send_file(chat,files_uploaded,video=True)
 
 
-    elif args.image:
+    if args.image:
         if not args.album:
-            chats = await display_list(args.nchats,args.chats) 
+            if not chats:
+                chats = await display_list(args.nchats,args.chats) 
             for image in args.image:
                 for chat in chats:
                     await client.send_file(chat,image,image=True) 
         else:
-            chats = await display_list(args.nchats,args.chats) 
+            if not chats:
+                chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
 
             for file in args.image:
                 if not args.quiet:
-                    files_uploaded.append(await client.upload_file(file,progress_callback=progress))
+                    files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
                 else:
                     files_uploaded.append(await client.upload_file(file))
 
@@ -177,27 +142,25 @@ async def main():
                 await client.send_file(chat,files_uploaded,image=True)
 
 
-    elif args.file:
+    if args.file:
         if not args.album:
-            chats = await display_list(args.nchats,args.chats) 
+            if not chats:
+                chats = await display_list(args.nchats,args.chats) 
             for file in args.file:
                 for chat in chats:
                     if not args.quiet:
-                        pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                        await client.send_file(chat,file,force_document=True,progress_callback=progress) 
-                        del pbar
+                        await client.send_file(chat,file,force_document=True,progress_callback=progress_bar.progress) 
                     else:
                         await client.send_file(chat,file,force_document=True) 
 
         else: 
-            chats = await display_list(args.nchats,args.chats) 
+            if not chats:
+                chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
 
             for file in args.file:
                 if not args.quiet:
-                    pbar = tqdm(total=100,desc="Uploading",ncols=85,leave=True,position=0,ascii=True)
-                    files_uploaded.append(await client.upload_file(file,progress_callback=progress))
-                    del pbar
+                    files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
                 else:
                     files_uploaded.append(await client.upload_file(file))
 
