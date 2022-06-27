@@ -1,6 +1,6 @@
-from alive_progress import alive_bar 
 from time import sleep 
 from threading import Thread
+from rich.progress import Progress
 
 flag,no_iter,prev_count = False, 0, 0
 num_arr = []
@@ -68,15 +68,31 @@ def bar_func():
    
     global no_iter
     global flag
+    fl_per = 0 
 
-    with alive_bar(100) as bar: 
+#    with alive_bar(100,title='Uploading') as bar: 
+#        while True: 
+#            if no_iter == 100: 
+#                no_iter = 0 
+#                break 
+#
+#            if flag == True: 
+#                bar() 
+#                no_iter += 1
+#                flag = False 
+
+    with Progress() as bar: 
+        upload_task = bar.add_task("[green]Uploading...",total=100) 
+
         while True: 
             if no_iter == 100: 
-                no_iter = 0 
-                break 
+                no_iter = 0
+                break
 
             if flag == True: 
-                bar() 
+                fl_per += 0.1
+                fl_per = round(fl_per,1) 
+                bar.update(upload_task,advance=fl_per)
                 no_iter += 1
-                flag = False 
+                flag = False
 
