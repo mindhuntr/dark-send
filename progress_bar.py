@@ -68,17 +68,6 @@ def bar_func():
     global no_iter
     global flag
 
-#    with alive_bar(100,title='Uploading') as bar: 
-#        while True: 
-#            if no_iter == 100: 
-#                no_iter = 0 
-#                break 
-#
-#            if flag == True: 
-#                bar() 
-#                no_iter += 1
-#                flag = False 
-
     with Progress() as bar: 
         upload_task = bar.add_task("[green]Uploading...",total=100) 
 
