@@ -109,15 +109,17 @@ async def main():
             if not chats:
                 chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
+            
+            if chats:
 
-            for file in args.video:
-                if not args.quiet:
-                    files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
-                else:
-                    files_uploaded.append(await client.upload_file(file))
+                for file in args.video:
+                    if not args.quiet:
+                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
+                    else:
+                        files_uploaded.append(await client.upload_file(file))
 
-            for chat in chats:
-                await client.send_file(chat,files_uploaded,video=True)
+                for chat in chats:
+                    await client.send_file(chat,files_uploaded,video=True)
 
 
     if args.image:
@@ -131,15 +133,17 @@ async def main():
             if not chats:
                 chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
+            
+            if chats:
 
-            for file in args.image:
-                if not args.quiet:
-                    files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
-                else:
-                    files_uploaded.append(await client.upload_file(file))
+                for file in args.image:
+                    if not args.quiet:
+                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
+                    else:
+                        files_uploaded.append(await client.upload_file(file))
 
-            for chat in chats:
-                await client.send_file(chat,files_uploaded,image=True)
+                for chat in chats:
+                    await client.send_file(chat,files_uploaded,image=True)
 
 
     if args.file:
@@ -157,15 +161,16 @@ async def main():
             if not chats:
                 chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
+            
+            if chats:
+                for file in args.file:
+                    if not args.quiet:
+                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
+                    else:
+                        files_uploaded.append(await client.upload_file(file))
 
-            for file in args.file:
-                if not args.quiet:
-                    files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
-                else:
-                    files_uploaded.append(await client.upload_file(file))
-
-            for chat in chats:
-                await client.send_file(chat,files_uploaded,force_document=True)
+                for chat in chats:
+                    await client.send_file(chat,files_uploaded,force_document=True)
 
 
 with client:
