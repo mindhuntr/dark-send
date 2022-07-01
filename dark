@@ -8,8 +8,10 @@ import inquirer
 from telethon.sessions import StringSession 
 import config 
 import progress_bar 
+import ctypes
 
 """ Get api id and hash from https://my.telegram.org """ 
+
 
 if os.path.exists(config.fullpath):
 
@@ -101,9 +103,11 @@ async def main():
             for video in args.video: 
                 for chat in chats:
                     if not args.quiet:
-                        await client.send_file(chat,video,video=True,progress_callback=progress_bar.progress) 
+                        video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512)
+                        await client.send_file(chat,video_handle,video=True) 
                     else:
-                        await client.send_file(chat,video,video=True) 
+                        video_handle = await client.upload_file(video,part_size_kb=512)
+                        await client.send_file(chat,video_handle,video=True) 
 
         else:
             if not chats:
@@ -111,12 +115,11 @@ async def main():
             files_uploaded = []
             
             if chats:
-
                 for file in args.video:
                     if not args.quiet:
-                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
+                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
                     else:
-                        files_uploaded.append(await client.upload_file(file))
+                        files_uploaded.append(await client.upload_file(file,part_size_kb=512))
 
                 for chat in chats:
                     await client.send_file(chat,files_uploaded,video=True)
@@ -128,19 +131,19 @@ async def main():
                 chats = await display_list(args.nchats,args.chats) 
             for image in args.image:
                 for chat in chats:
-                    await client.send_file(chat,image,image=True) 
+                    image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
+                    await client.send_file(chat,image_handle,image=True) 
         else:
             if not chats:
                 chats = await display_list(args.nchats,args.chats) 
             files_uploaded = []
             
             if chats:
-
                 for file in args.image:
                     if not args.quiet:
-                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
+                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
                     else:
-                        files_uploaded.append(await client.upload_file(file))
+                        files_uploaded.append(await client.upload_file(file,part_size_kb=512))
 
                 for chat in chats:
                     await client.send_file(chat,files_uploaded,image=True)
@@ -153,7 +156,8 @@ async def main():
             for file in args.file:
                 for chat in chats:
                     if not args.quiet:
-                        await client.send_file(chat,file,force_document=True,progress_callback=progress_bar.progress) 
+                        file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
+                        await client.send_file(chat,file_handle,force_document=True) 
                     else:
                         await client.send_file(chat,file,force_document=True) 
 
@@ -165,9 +169,9 @@ async def main():
             if chats:
                 for file in args.file:
                     if not args.quiet:
-                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress))
+                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
                     else:
-                        files_uploaded.append(await client.upload_file(file))
+                        files_uploaded.append(await client.upload_file(file,part_size_kb=512))
 
                 for chat in chats:
                     await client.send_file(chat,files_uploaded,force_document=True)
