@@ -131,8 +131,14 @@ async def main():
                 chats = await display_list(args.nchats,args.chats) 
             for image in args.image:
                 for chat in chats:
-                    image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
-                    await client.send_file(chat,image_handle,image=True) 
+                    if not args.quite:
+
+                        image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
+                        await client.send_file(chat,image_handle,image=True) 
+                    else:
+                        image_handle = await client.upload_file(image,part_size_kb=512)
+                        await client.send_file(chat,image_handle,image=True) 
+
         else:
             if not chats:
                 chats = await display_list(args.nchats,args.chats) 
@@ -159,7 +165,8 @@ async def main():
                         file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
                         await client.send_file(chat,file_handle,force_document=True) 
                     else:
-                        await client.send_file(chat,file,force_document=True) 
+                        file_handle = await client.upload_file(file,part_size_kb=512)
+                        await client.send_file(chat,file_handle,force_document=True) 
 
         else: 
             if not chats:
