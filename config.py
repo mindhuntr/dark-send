@@ -8,6 +8,8 @@ parser = configparser.ConfigParser()
 fullpath = os.path.expanduser("~/.config/dark-send.conf") 
 
 def generate_conf():
+    
+    print("Get api id and hash from https://my.telegram.org") 
 
     api_id = input("Enter your api id: ") 
     api_hash = input("Enter your api hash: ") 
