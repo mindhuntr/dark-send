@@ -1,6 +1,6 @@
 from time import sleep 
 from threading import Thread
-from rich.progress import Progress
+from rich.progress import Progress, SpinnerColumn 
 
 flag,prev_count = False, 0, 
 num_arr = []
@@ -74,7 +74,7 @@ def bar_func():
     global flag
     global no_thread
 
-    with Progress() as bar: 
+    with Progress(SpinnerColumn(),*Progress.get_default_columns()) as bar: 
         upload_task = bar.add_task("[green]Uploading...",total=100) 
 
         for i in range(0,100): 
