@@ -2,9 +2,8 @@ from time import sleep
 from threading import Thread
 from rich.progress import Progress, SpinnerColumn 
 
-flag,prev_count = False, 0, 
+flag,prev_count,no_thread = False, 0, 0
 num_arr = []
-no_thread = 0
 
 def percentage(part,whole): 
     per_num = 100 * float(part)/float(whole)

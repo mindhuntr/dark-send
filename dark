@@ -12,23 +12,6 @@ import ctypes
 
 """ Get api id and hash from https://my.telegram.org """ 
 
-
-if os.path.exists(config.fullpath):
-
-    config.parser.read(config.fullpath) 
-    api_id = config.parser.get('dark-send','api_id') 
-    api_hash = config.parser.get('dark-send','api_hash') 
-    string = config.parser.get('dark-send','string_session') 
-
-else:
-    config.generate_conf() 
-    config.parser.read(config.fullpath) 
-    api_id = config.parser.get('dark-send','api_id') 
-    api_hash = config.parser.get('dark-send','api_hash') 
-    string = config.parser.get('dark-send','string_session') 
-
-client = TelegramClient(StringSession(string), api_id, api_hash) 
-
 async def display_list(no_chats,chats):
 
     if not no_chats:
@@ -68,11 +51,15 @@ async def display_list(no_chats,chats):
 
     answers = inquirer.prompt(questions,style=inquirer.style)
     peers = []
-    for val in answers.values():
-        for answer in val:
-            peers.append(id[answer]) 
 
-        return peers
+    if answers:
+        for val in answers.values():
+            for answer in val:
+                peers.append(id[answer]) 
+
+            return peers
+    else:
+        exit(1) 
 
           
 async def main(): 
@@ -183,6 +170,23 @@ async def main():
                 for chat in chats:
                     await client.send_file(chat,files_uploaded,force_document=True)
 
+if __name__ == "__main__":
 
-with client:
-    client.loop.run_until_complete(main())
+    if os.path.exists(config.fullpath):
+
+        config.parser.read(config.fullpath) 
+        api_id = config.parser.get('dark-send','api_id') 
+        api_hash = config.parser.get('dark-send','api_hash') 
+        string = config.parser.get('dark-send','string_session') 
+
+    else:
+        config.generate_conf() 
+        config.parser.read(config.fullpath) 
+        api_id = config.parser.get('dark-send','api_id') 
+        api_hash = config.parser.get('dark-send','api_hash') 
+        string = config.parser.get('dark-send','string_session') 
+
+    client = TelegramClient(StringSession(string), api_id, api_hash) 
+
+    with client:
+        client.loop.run_until_complete(main())
