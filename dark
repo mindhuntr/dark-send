@@ -4,7 +4,7 @@ from telethon import TelegramClient
 import sys 
 import os 
 import argparse
-import inquirer
+from inquirer import style,display_list
 from telethon.sessions import StringSession 
 import config 
 import progress_bar 
@@ -12,56 +12,6 @@ import ctypes
 
 """ Get api id and hash from https://my.telegram.org """ 
 
-async def display_list(no_chats,chats):
-
-    if not no_chats:
-        no_chats = 15
-
-    global client 
-    id = {}
-    async for dialog in client.iter_dialogs(no_chats):
-        id[dialog.name] = dialog.id
-
-    if chats:
-        peers = []
-        for chat in chats:
-            try:
-                peers.append(id[chat])
-            except:
-                pass
-
-        return peers
-
-    dist = []
-    for key in id.keys():
-        tmp = {}
-        tmp['name'] = key
-        dist.append(tmp)
-
-    questions = [
-    {
-    'type': 'checkbox',
-    'message': 'Select chat',
-    'name': 'Chats',
-    'choices': dist,
-    'validate': lambda answer: 'Choose atleast one chat' \
-            if len(answer) == 0 else True
-            }
-    ]
-
-    answers = inquirer.prompt(questions,style=inquirer.style)
-    peers = []
-
-    if answers:
-        for val in answers.values():
-            for answer in val:
-                peers.append(id[answer]) 
-
-            return peers
-    else:
-        exit(1) 
-
-          
 async def main(): 
 
     parser = argparse.ArgumentParser(description='command line telegram client') 
@@ -69,16 +19,22 @@ async def main():
     parser.add_argument('-v','--video',type=str,nargs="+") 
     parser.add_argument('-i','--image',type=str,nargs="+") 
     parser.add_argument('-f','--file',type=str,nargs="+") 
-    parser.add_argument('-n','--nchats',type=int,nargs="?",help="no chats to display") 
+    parser.add_argument('-n','--nchats',type=int,nargs="?",default=15,help="no chats to display") 
     parser.add_argument('-c','--chats',type=str,nargs="*",help="name of the chat") 
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
     parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
 
     chats = [] 
     args = parser.parse_args() 
+    chat_list = {} 
+
+    if not chats:
+        async for dialog in client.iter_dialogs(args.nchats): 
+            chat_list[dialog.name] = dialog.id 
+
     if args.message:
         if not chats:
-            chats = await display_list(args.nchats,args.chats)  
+            chats = await display_list(args.nchats,args.chats,chat_list)  
         for message in args.message: 
             for chat in chats:
                 await client.send_message(chat,message)
@@ -86,19 +42,19 @@ async def main():
     if args.video:
         if not args.album:
             if not chats:
-                chats = await display_list(args.nchats,args.chats)  
+                chats = await display_list(args.nchats,args.chats,chat_list)  
             for video in args.video: 
                 for chat in chats:
                     if not args.quiet:
                         video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512)
-                        await client.send_file(chat,video_handle,video=True) 
+                        await client.send_file(chat,video_handle,video=True,supports_streaming=True) 
                     else:
                         video_handle = await client.upload_file(video,part_size_kb=512)
-                        await client.send_file(chat,video_handle,video=True) 
+                        await client.send_file(chat,video_handle,video=True,supports_streaming=True) 
 
         else:
             if not chats:
-                chats = await display_list(args.nchats,args.chats) 
+                chats = await display_list(args.nchats,args.chats,chat_list) 
             files_uploaded = []
             
             if chats:
@@ -109,13 +65,13 @@ async def main():
                         files_uploaded.append(await client.upload_file(file,part_size_kb=512))
 
                 for chat in chats:
-                    await client.send_file(chat,files_uploaded,video=True)
+                    await client.send_file(chat,files_uploaded,video=True,supports_streaming=True)
 
 
     if args.image:
         if not args.album:
             if not chats:
-                chats = await display_list(args.nchats,args.chats) 
+                chats = await display_list(args.nchats,args.chats,chat_list) 
             for image in args.image:
                 for chat in chats:
                     if not args.quiet:
@@ -128,7 +84,7 @@ async def main():
 
         else:
             if not chats:
-                chats = await display_list(args.nchats,args.chats) 
+                chats = await display_list(args.nchats,args.chats,chat_list) 
             files_uploaded = []
             
             if chats:
@@ -145,7 +101,7 @@ async def main():
     if args.file:
         if not args.album:
             if not chats:
-                chats = await display_list(args.nchats,args.chats) 
+                chats = await display_list(args.nchats,args.chats,chat_list) 
             for file in args.file:
                 for chat in chats:
                     if not args.quiet:
@@ -157,7 +113,7 @@ async def main():
 
         else: 
             if not chats:
-                chats = await display_list(args.nchats,args.chats) 
+                chats = await display_list(args.nchats,args.chats,chat_list) 
             files_uploaded = []
             
             if chats:

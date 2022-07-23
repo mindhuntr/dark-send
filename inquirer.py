@@ -1,8 +1,6 @@
 from __future__ import print_function, unicode_literals
-
 from PyInquirer import style_from_dict, Token, prompt, Separator
 from pprint import pprint
-
 
 style = style_from_dict({
     Token.Separator: '#96cdfb',
@@ -13,3 +11,49 @@ style = style_from_dict({
     Token.Answer: '#f44336 bold',
     Token.Question: '',
 })
+
+
+async def display_list(no_chats,chats,id_list):
+
+    if not no_chats:
+        no_chats = 15
+
+    if chats:
+        peers = []
+        for chat in chats:
+            try:
+                peers.append(id_list[chat])
+            except:
+                pass
+
+        return peers
+
+    dist = []
+    for key in id_list.keys():
+        tmp = {}
+        tmp['name'] = key
+        dist.append(tmp)
+
+    questions = [
+    {
+    'type': 'checkbox',
+    'message': 'Select chat',
+    'name': 'Chats',
+    'choices': dist,
+    'validate': lambda answer: 'Choose atleast one chat' \
+            if len(answer) == 0 else True
+            }
+    ]
+
+    answers = prompt(questions,style=style)
+    peers = []
+
+    if answers:
+        for val in answers.values():
+            for answer in val:
+                peers.append(id_list[answer]) 
+
+            return peers
+    else:
+        exit(1) 
+
