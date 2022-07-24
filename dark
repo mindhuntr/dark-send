@@ -1,11 +1,13 @@
 #!/usr/bin/python3 
 
 from telethon import TelegramClient 
+from telethon.tl.types import DocumentAttributeVideo
 import sys 
 import os 
 import argparse
 from inquirer import style,display_list
 from telethon.sessions import StringSession 
+from meta_data import meta_extract
 import config 
 import progress_bar 
 import ctypes
@@ -40,29 +42,33 @@ async def main():
                 await client.send_message(chat,message)
 
     if args.video:
+
         if not args.album:
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list)  
             for video in args.video: 
-                for chat in chats:
-                    if not args.quiet:
-                        video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512)
-                        await client.send_file(chat,video_handle,video=True,supports_streaming=True) 
-                    else:
-                        video_handle = await client.upload_file(video,part_size_kb=512)
-                        await client.send_file(chat,video_handle,video=True,supports_streaming=True) 
+                if os.path.exists(video):
+                    height, width, duration = meta_extract(video) 
+                    for chat in chats:
+                        if not args.quiet:
+                            video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512)
+                            await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                        else:
+                            video_handle = await client.upload_file(video,part_size_kb=512)
+                            await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
 
         else:
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list) 
             files_uploaded = []
-            
+             
             if chats:
                 for file in args.video:
-                    if not args.quiet:
-                        files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
-                    else:
-                        files_uploaded.append(await client.upload_file(file,part_size_kb=512))
+                    if os.path.exists(file):
+                        if not args.quiet:
+                            files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
+                        else:
+                            files_uploaded.append(await client.upload_file(file,part_size_kb=512))
 
                 for chat in chats:
                     await client.send_file(chat,files_uploaded,video=True,supports_streaming=True)
