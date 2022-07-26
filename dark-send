@@ -10,7 +10,6 @@ from telethon.sessions import StringSession
 from meta_data import meta_extract
 import config 
 import progress_bar 
-import ctypes
 
 """ Get api id and hash from https://my.telegram.org """ 
 
