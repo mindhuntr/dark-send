@@ -2,6 +2,11 @@
 
 A relatively simple command line telegram client written in python 
 
+## Dependencies 
+``` shell 
+pip3 install -r requirements.txt 
+``` 
+
 ## Installation 
 ``` shell
 git clone https://github.com/mindhuntr/dark-send 
@@ -36,6 +41,6 @@ dark -v /path/to/file
 
 To send a file directly without selecting from the list
 ``` shell 
-dark -f /path/to/file -c "name_of_the_chat" 
+dark -f /path/to/file -c "Alienists" 
 ```
 
