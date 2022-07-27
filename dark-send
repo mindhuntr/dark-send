@@ -2,12 +2,11 @@
 
 from telethon import TelegramClient 
 from telethon.tl.types import DocumentAttributeVideo
-import sys 
-import os 
-import argparse
 from inquirer import style,display_list
 from telethon.sessions import StringSession 
 from meta_data import meta_extract
+from os import path 
+from argparse import ArgumentParser 
 import config 
 import progress_bar 
 
@@ -15,7 +14,7 @@ import progress_bar
 
 async def main(): 
 
-    parser = argparse.ArgumentParser(description='command line telegram client') 
+    parser = ArgumentParser(description='command line telegram client') 
     parser.add_argument('message', type=str,help="the message you would like to send",nargs="*") 
     parser.add_argument('-v','--video',type=str,nargs="+") 
     parser.add_argument('-i','--image',type=str,nargs="+") 
@@ -45,7 +44,7 @@ async def main():
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list)  
             for video in args.video: 
-                if os.path.exists(video):
+                if path.exists(video):
                     height, width, duration = meta_extract(video) 
                     for chat in chats:
                         if not args.quiet:
@@ -64,7 +63,7 @@ async def main():
              
             if chats:
                 for file in args.video:
-                    if os.path.exists(file):
+                    if path.exists(file):
                         if not args.quiet:
                             files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
                         else:
@@ -82,7 +81,7 @@ async def main():
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list) 
             for image in args.image:
-                if os.path.exists(image):
+                if path.exists(image):
                     for chat in chats:
                         if not args.quiet:
                             image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
@@ -100,7 +99,7 @@ async def main():
             
             if chats:
                 for file in args.image:
-                    if os.path.exists(file):
+                    if path.exists(file):
                         if not args.quiet:
                             files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
                         else:
@@ -118,7 +117,7 @@ async def main():
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list) 
             for file in args.file:
-                if os.path.exists(file):
+                if path.exists(file):
                     for chat in chats:
                         if not args.quiet:
                             file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
@@ -136,7 +135,7 @@ async def main():
             
             if chats:
                 for file in args.file:
-                    if os.path.exists(file):
+                    if path.exists(file):
                         if not args.quiet:
                             files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
                         else:
@@ -150,7 +149,7 @@ async def main():
 
 if __name__ == "__main__":
 
-    if os.path.exists(config.fullpath):
+    if path.exists(config.fullpath):
 
         config.parser.read(config.fullpath) 
         api_id = config.parser.get('dark-send','api_id') 
