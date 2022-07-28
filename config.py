@@ -1,8 +1,7 @@
-import sys
-import os 
-import configparser 
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
+import configparser 
+import os 
 
 parser = configparser.ConfigParser() 
 fullpath = os.path.expanduser("~/.config/dark-send.conf") 
