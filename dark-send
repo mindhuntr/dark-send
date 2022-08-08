@@ -19,7 +19,7 @@ async def main():
     parser.add_argument('-v','--video',type=str,nargs="+") 
     parser.add_argument('-i','--image',type=str,nargs="+") 
     parser.add_argument('-f','--file',type=str,nargs="+") 
-    parser.add_argument('-n','--nchats',type=int,nargs="?",default=15,help="no chats to display") 
+    parser.add_argument('-n','--nchats',type=int,nargs="?",default=20,help="no chats to display") 
     parser.add_argument('-c','--chats',type=str,nargs="*",help="name of the chat") 
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
     parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
