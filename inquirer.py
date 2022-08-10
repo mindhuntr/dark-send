@@ -19,10 +19,7 @@ async def display_list(no_chats,chats,id_list):
     if chats:
         peers = []
         for chat in chats:
-            try:
-                peers.append(id_list[chat])
-            except:
-                pass
+            peers.append(id_list[chat])
 
         return peers
 
