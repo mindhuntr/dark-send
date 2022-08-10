@@ -26,11 +26,11 @@ async def main():
 
     chats = [] 
     args = parser.parse_args() 
-    chat_list = {} 
 
     if not chats:
-        async for dialog in client.iter_dialogs(args.nchats): 
-            chat_list[dialog.name] = dialog.id 
+        chat_list = { 
+                dialog.name:dialog.id async for dialog in client.iter_dialogs(args.nchats)
+                }
 
     if args.message:
         if not chats:
@@ -54,7 +54,7 @@ async def main():
                             video_handle = await client.upload_file(video,part_size_kb=512)
                             await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
                 else:
-                    print(video + " doesnt exist") 
+                    print("{} doesnt exist".format(video)) 
 
         else:
             if not chats:
@@ -69,7 +69,7 @@ async def main():
                         else:
                             files_uploaded.append(await client.upload_file(file,part_size_kb=512))
                     else:
-                        print(file + " doesnt exist") 
+                        print("{} doesnt exist".format(file)) 
                 
                 if files_uploaded:
                     for chat in chats:
@@ -90,7 +90,7 @@ async def main():
                             image_handle = await client.upload_file(image,part_size_kb=512)
                             await client.send_file(chat,image_handle,image=True) 
                 else:
-                    print(image + " doesnt exist") 
+                    print("{} doesnt exist".format(image)) 
 
         else:
             if not chats:
@@ -105,7 +105,7 @@ async def main():
                         else:
                             files_uploaded.append(await client.upload_file(file,part_size_kb=512))
                     else:
-                        print(file + " doesnt exist")
+                        print("{} doesnt exist".format(file))
 
                 if files_uploaded:
                     for chat in chats:
@@ -126,7 +126,7 @@ async def main():
                             file_handle = await client.upload_file(file,part_size_kb=512)
                             await client.send_file(chat,file_handle,force_document=True) 
                 else:
-                    print(file + " doesnt exist") 
+                    print("{} doesnt exist".format(file)) 
 
         else: 
             if not chats:
@@ -141,7 +141,7 @@ async def main():
                         else:
                             files_uploaded.append(await client.upload_file(file,part_size_kb=512))
                     else:
-                        print(file + " doesnt exist") 
+                        print("{} doesnt exist".format(file)) 
                 
                 if files_uploaded:
                     for chat in chats:
