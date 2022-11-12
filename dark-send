@@ -121,10 +121,22 @@ async def main():
                     for chat in chats:
                         if not args.quiet:
                             file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
-                            await client.send_file(chat,file_handle,force_document=True) 
+                            try:
+                                await client.send_file(chat,file_handle,force_document=True) 
+                            except:
+                                print("Unable to send files to chat. Choose a different chat") 
+                                l_chats = await display_list(args.nchats,args.chats,chat_list)
+                                for l_chat in l_chats:
+                                    await client.send_file(l_chat,file_handle,force_document=True) 
                         else:
                             file_handle = await client.upload_file(file,part_size_kb=512)
-                            await client.send_file(chat,file_handle,force_document=True) 
+                            try:
+                                await client.send_file(chat,file_handle,force_document=True) 
+                            except:
+                                print("Unable to send files to chat. Choose a different chat") 
+                                l_chats = await display_list(args.nchats,args.chats,chat_list)
+                                for l_chat in l_chats:
+                                    await client.send_file(l_chat,file_handle,force_document=True) 
                 else:
                     print("{} doesnt exist".format(file)) 
 
@@ -145,7 +157,13 @@ async def main():
                 
                 if files_uploaded:
                     for chat in chats:
-                        await client.send_file(chat,files_uploaded,force_document=True)
+                        try:
+                            await client.send_file(chat,files_uploaded,force_document=True) 
+                        except:
+                            print("Unable to send files to chat. Choose a different chat") 
+                            l_chats = await display_list(args.nchats,args.chats,chat_list)
+                            for l_chat in l_chats:
+                                await client.send_file(l_chat,files_uploaded,force_document=True) 
 
 if __name__ == "__main__":
 
