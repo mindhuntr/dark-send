@@ -5,10 +5,11 @@ from telethon.tl.types import DocumentAttributeVideo
 from inquirer import style,display_list
 from telethon.sessions import StringSession 
 from meta_data import meta_extract
-from os import path 
 from argparse import ArgumentParser 
-import config 
+from os import path 
 import progress_bar 
+import mimetypes
+import config 
 
 """ Get api id and hash from https://my.telegram.org """ 
 
@@ -19,12 +20,14 @@ async def main():
     parser.add_argument('-v','--video',type=str,nargs="+",help="videos to send") 
     parser.add_argument('-i','--image',type=str,nargs="+",help="images to send") 
     parser.add_argument('-f','--file',type=str,nargs="+",help="files to send")
+    parser.add_argument('-u','--uncompressed',type=str,nargs="+",help="send files as ucompressed") 
     parser.add_argument('-n','--nchats',type=int,nargs="?",default=20,help="no chats to display") 
     parser.add_argument('-c','--chats',type=str,nargs="*",help="name of the chat") 
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
     parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
 
     chats = [] 
+    mimetypes.init()
     args = parser.parse_args() 
 
     if not chats:
@@ -40,41 +43,51 @@ async def main():
                 await client.send_message(chat,message)
 
     if args.video:
-        if not args.album:
-            if not chats:
-                chats = await display_list(args.nchats,args.chats,chat_list)  
-            for video in args.video: 
-                if path.exists(video):
-                    height, width, duration = meta_extract(video) 
-                    for chat in chats:
-                        if not args.quiet:
-                            video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512)
-                            await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
-                        else:
-                            video_handle = await client.upload_file(video,part_size_kb=512)
-                            await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
-                else:
-                    print("{} doesnt exist".format(video)) 
-
-        else:
-            if not chats:
-                chats = await display_list(args.nchats,args.chats,chat_list) 
-            files_uploaded = []
-             
-            if chats:
-                for file in args.video:
-                    if path.exists(file):
-                        if not args.quiet:
-                            files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
-                        else:
-                            files_uploaded.append(await client.upload_file(file,part_size_kb=512))
+        if not chats:
+            chats = await display_list(args.nchats,args.chats,chat_list)  
+        for video in args.video: 
+            if path.exists(video):
+                height, width, duration = meta_extract(video) 
+                for chat in chats:
+                    if not args.quiet:
+                        video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512)
+                        await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
                     else:
-                        print("{} doesnt exist".format(file)) 
-                
-                if files_uploaded:
-                    for chat in chats:
-                        await client.send_file(chat,files_uploaded,video=True,supports_streaming=True)
+                        video_handle = await client.upload_file(video,part_size_kb=512)
+                        await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+            else:
+                print("{} doesnt exist".format(video)) 
 
+
+    if args.uncompressed: 
+
+        if not chats:
+            chats = await display_list(args.nchats,args.chats,chat_list)
+
+        for uncomps in args.uncompressed: 
+            if path.exists(uncomps):
+                mime_out = mimetypes.guess_type(uncomps)[0]
+                if mime_out.split('/')[0] == "image": 
+                    for chat in chats:
+                        if not args.quiet:
+                            image_handle = await client.upload_file(uncomps,progress_callback=progress_bar.progress,part_size_kb=512)
+                            await client.send_file(chat,image_handle,image=True) 
+                        else:
+                            image_handle = await client.upload_file(uncomps,part_size_kb=512)
+                            await client.send_file(chat,image_handle,image=True) 
+
+                if mime_out.split('/')[0] == "video":
+                        height, width, duration = meta_extract(uncomps) 
+                        for chat in chats:
+                            if not args.quiet:
+                                video_handle = await client.upload_file(uncomps,progress_callback=progress_bar.progress,part_size_kb=512)
+                                await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                            else:
+                                video_handle = await client.upload_file(uncomps,part_size_kb=512)
+                                await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+
+            else:
+                print("{} doesnt exist".format(uncomps)) 
 
     if args.image:
         if not args.album:
@@ -185,3 +198,4 @@ if __name__ == "__main__":
 
     with client:
         client.loop.run_until_complete(main())
+
