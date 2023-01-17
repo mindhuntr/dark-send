@@ -67,24 +67,25 @@ async def main():
         for comps in args.compressed: 
             if path.exists(comps):
                 mime_out = mimetypes.guess_type(comps)[0]
-                if mime_out.split('/')[0] == "image": 
-                    for chat in chats:
-                        if not args.quiet:
-                            image_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
-                            await client.send_file(chat,image_handle,image=True) 
-                        else:
-                            image_handle = await client.upload_file(comps,part_size_kb=512)
-                            await client.send_file(chat,image_handle,image=True) 
-
-                if mime_out.split('/')[0] == "video":
-                        height, width, duration = meta_extract(comps) 
+                if mime_out:
+                    if mime_out.split('/')[0] == "image": 
                         for chat in chats:
                             if not args.quiet:
-                                video_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
-                                await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                                image_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
+                                await client.send_file(chat,image_handle,image=True) 
                             else:
-                                video_handle = await client.upload_file(comps,part_size_kb=512)
-                                await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                                image_handle = await client.upload_file(comps,part_size_kb=512)
+                                await client.send_file(chat,image_handle,image=True) 
+
+                    if mime_out.split('/')[0] == "video":
+                            height, width, duration = meta_extract(comps) 
+                            for chat in chats:
+                                if not args.quiet:
+                                    video_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
+                                    await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                                else:
+                                    video_handle = await client.upload_file(comps,part_size_kb=512)
+                                    await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
 
             else:
                 print("{} doesnt exist".format(comps)) 
