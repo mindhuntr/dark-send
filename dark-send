@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
+from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos,InputMessagesFilterDocument
 from telethon import TelegramClient 
-from telethon.tl.types import DocumentAttributeVideo
 from inquirer import style,display_list
 from telethon.sessions import StringSession 
 from meta_data import meta_extract
@@ -25,6 +25,7 @@ async def main():
     parser.add_argument('-c','--chats',type=str,nargs="*",help="name of the chat") 
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
     parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
+    parser.add_argument('--download-images',action="store_true",help="download all photos from selected chats") 
 
     chats = [] 
     mimetypes.init()
@@ -178,6 +179,20 @@ async def main():
                             l_chats = await display_list(args.nchats,args.chats,chat_list)
                             for l_chat in l_chats:
                                 await client.send_file(l_chat,files_uploaded,force_document=True) 
+
+    if args.download_images: 
+
+        inc = 1
+        if not chats:
+            chats = await display_list(args.nchats,args.chats,chat_list)  
+
+        for chat in chats: 
+            async for message in client.iter_messages(chat,filter=InputMessagesFilterPhotos):
+                file_name = "image_" + str(inc) + ".jpg" 
+                with open(file_name,'wb') as file:
+                    await client.download_media(message,file,progress_callback=progress_bar.progress) 
+
+                inc = inc + 1 
 
 if __name__ == "__main__":
 

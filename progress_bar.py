@@ -74,7 +74,7 @@ def bar_func():
     global no_thread
 
     with Progress(SpinnerColumn(),*Progress.get_default_columns()) as bar: 
-        upload_task = bar.add_task("[green]Uploading...",total=100) 
+        upload_task = bar.add_task("[green]Up/Down...",total=100) 
 
         for i in range(0,100): 
             while True: 
