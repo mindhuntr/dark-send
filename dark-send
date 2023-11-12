@@ -25,7 +25,8 @@ async def main():
     parser.add_argument('-c','--chats',type=str,nargs="*",help="name of the chat") 
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
     parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
-    parser.add_argument('--download-images',action="store_true",help="download all photos from selected chats") 
+    parser.add_argument('--download-images',action="store_true",help="download photos from selected chats") 
+    parser.add_argument('--download-media',type=int,nargs="+",help="download selected media from chats (use message id)") 
 
     chats = [] 
     mimetypes.init()
@@ -193,6 +194,39 @@ async def main():
                     await client.download_media(message,file,progress_callback=progress_bar.progress) 
 
                 inc = inc + 1 
+
+    if args.download_media: 
+
+        inc_v = inc_i = 1
+
+        if not chats: 
+            chats = await display_list(args.nchats,args.chats,chat_list)
+
+        print(args.download_media)
+
+        for chat in chats: 
+            async for message in client.iter_messages(chat): 
+                if message.id in args.download_media: 
+                    try:
+                        if message.media.document.mime_type: 
+                            tp, _ = message.media.document.mime_type.split('/')
+
+                            if tp == "application": 
+                                file_name = message.file.name
+                            elif tp == "video": 
+                                file_name = "video_" + str(inc_v) + ".mp4" 
+                                inc_v = inc_v + 1
+
+                    except AttributeError: 
+                        file_name = "image_" + str(inc_i) + ".jpg" 
+                        inc_i = inc_i + 1 
+                        
+                    with open(file_name,'wb') as file:
+                        await client.download_media(message,file,progress_callback=progress_bar.progress) 
+                    args.download_media.remove(message.id) 
+
+                if not args.download_media: 
+                    break 
 
 if __name__ == "__main__":
 
