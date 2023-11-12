@@ -202,8 +202,6 @@ async def main():
         if not chats: 
             chats = await display_list(args.nchats,args.chats,chat_list)
 
-        print(args.download_media)
-
         for chat in chats: 
             async for message in client.iter_messages(chat): 
                 if message.id in args.download_media: 
