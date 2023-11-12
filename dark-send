@@ -223,7 +223,7 @@ async def main():
                         await client.download_media(message,file,progress_callback=progress_bar.progress) 
                     args.download_media.remove(message.id) 
 
-                if not args.download_media: 
+                if min(args.download_media) > message.id: 
                     break 
 
 if __name__ == "__main__":
