@@ -2,6 +2,7 @@
 
 from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos,InputMessagesFilterDocument
 from telethon import TelegramClient 
+from datetime import datetime 
 from inquirer import style,display_list
 from telethon.sessions import StringSession 
 from meta_data import meta_extract
@@ -32,45 +33,50 @@ async def main():
     mimetypes.init()
     args = parser.parse_args() 
 
+    # Load all chats and put them in a dict
     if not chats:
         chat_list = { 
                 dialog.name:dialog.id async for dialog in client.iter_dialogs(args.nchats)
                 }
 
+    ## Send Message 
+
     if args.message:
         if not chats:
-            chats = await display_list(args.nchats,args.chats,chat_list)  
+            chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list 
         for message in args.message: 
             for chat in chats:
-                await client.send_message(chat,message)
+                await client.send_message(chat,message) # Send message to selected chats 
 
+    ## Send Videos 
+    
     if args.video:
         if not chats:
             chats = await display_list(args.nchats,args.chats,chat_list)  
         for video in args.video: 
             if path.exists(video):
-                height, width, duration = meta_extract(video) 
+                height, width, duration = meta_extract(video) # Extract metadat for video
                 for chat in chats:
                     if not args.quiet:
-                        video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512)
-                        await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                        video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512) # Upload video with progress 
+                        await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) # Send the video
                     else:
-                        video_handle = await client.upload_file(video,part_size_kb=512)
+                        video_handle = await client.upload_file(video,part_size_kb=512) # Upload video without progress 
                         await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
             else:
                 print("{} doesnt exist".format(video)) 
 
+    ## Send both videos and images as compressed 
 
     if args.compressed: 
-
         if not chats:
             chats = await display_list(args.nchats,args.chats,chat_list)
 
         for comps in args.compressed: 
             if path.exists(comps):
-                mime_out = mimetypes.guess_type(comps)[0]
+                mime_out = mimetypes.guess_type(comps)[0] 
                 if mime_out:
-                    if mime_out.split('/')[0] == "image": 
+                    if mime_out.split('/')[0] == "image": # Check if image 
                         for chat in chats:
                             if not args.quiet:
                                 image_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
@@ -79,8 +85,8 @@ async def main():
                                 image_handle = await client.upload_file(comps,part_size_kb=512)
                                 await client.send_file(chat,image_handle,image=True) 
 
-                    if mime_out.split('/')[0] == "video":
-                            height, width, duration = meta_extract(comps) 
+                    if mime_out.split('/')[0] == "video": # Check if video 
+                            height, width, duration = meta_extract(comps)  # Extract metadata 
                             for chat in chats:
                                 if not args.quiet:
                                     video_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
@@ -91,6 +97,8 @@ async def main():
 
             else:
                 print("{} doesnt exist".format(comps)) 
+
+    ## Send Images 
 
     if args.image:
         if not args.album:
@@ -108,7 +116,7 @@ async def main():
                 else:
                     print("{} doesnt exist".format(image)) 
 
-        else:
+        else:                                                           # Send images as an album 
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list) 
             files_uploaded = []
@@ -128,6 +136,7 @@ async def main():
                         await client.send_file(chat,files_uploaded,image=True)
 
 
+    ## Send files 
     if args.file:
         if not args.album:
             if not chats:
@@ -183,21 +192,19 @@ async def main():
 
     if args.download_images: 
 
-        inc = 1
         if not chats:
             chats = await display_list(args.nchats,args.chats,chat_list)  
 
         for chat in chats: 
             async for message in client.iter_messages(chat,filter=InputMessagesFilterPhotos):
-                file_name = "image_" + str(inc) + ".jpg" 
+                now = datetime.now() 
+                current_time = now.strftime("%H_%M_%S")
+
+                file_name = "image_" + current_time + ".jpg" 
                 with open(file_name,'wb') as file:
                     await client.download_media(message,file,progress_callback=progress_bar.progress) 
 
-                inc = inc + 1 
-
     if args.download_media: 
-
-        inc_v = inc_i = 1
 
         if not chats: 
             chats = await display_list(args.nchats,args.chats,chat_list)
@@ -211,19 +218,24 @@ async def main():
 
                             if tp == "application": 
                                 file_name = message.file.name
+
                             elif tp == "video": 
-                                file_name = "video_" + str(inc_v) + ".mp4" 
-                                inc_v = inc_v + 1
+                                now = datetime.now() 
+                                current_time = now.strftime("%H_%M_%S")
+
+                                file_name = "video_" + current_time + ".mp4" 
 
                     except AttributeError: 
-                        file_name = "image_" + str(inc_i) + ".jpg" 
-                        inc_i = inc_i + 1 
+                        now = datetime.now() 
+                        current_time = now.strftime("%H_%M_%S")
+
+                        file_name = "image_" + current_time + ".jpg" 
                         
                     with open(file_name,'wb') as file:
                         await client.download_media(message,file,progress_callback=progress_bar.progress) 
                     args.download_media.remove(message.id) 
 
-                if min(args.download_media) > message.id: 
+                if (not args.download_media) or (min(args.download_media) > message.id): 
                     break 
 
 if __name__ == "__main__":
