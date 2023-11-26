@@ -198,7 +198,7 @@ async def main():
         for chat in chats: 
             async for message in client.iter_messages(chat,filter=InputMessagesFilterPhotos):
                 now = datetime.now() 
-                current_time = now.strftime("%H_%M_%S")
+                current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
                 file_name = "image_" + current_time + ".jpg" 
                 with open(file_name,'wb') as file:
@@ -211,6 +211,10 @@ async def main():
 
         for chat in chats: 
             async for message in client.iter_messages(chat): 
+
+                if (not args.download_media) or (min(args.download_media) > message.id): 
+                    break 
+
                 if message.id in args.download_media: 
                     try:
                         if message.media.document.mime_type: 
@@ -221,22 +225,24 @@ async def main():
 
                             elif tp == "video": 
                                 now = datetime.now() 
-                                current_time = now.strftime("%H_%M_%S")
+                                current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
                                 file_name = "video_" + current_time + ".mp4" 
 
                     except AttributeError: 
-                        now = datetime.now() 
-                        current_time = now.strftime("%H_%M_%S")
 
-                        file_name = "image_" + current_time + ".jpg" 
+                        if hasattr(message.media,'photo'): 
+                            now = datetime.now() 
+                            current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+
+                            file_name = "image_" + current_time + ".jpg" 
+                        else: 
+                            continue 
                         
                     with open(file_name,'wb') as file:
                         await client.download_media(message,file,progress_callback=progress_bar.progress) 
                     args.download_media.remove(message.id) 
 
-                if (not args.download_media) or (min(args.download_media) > message.id): 
-                    break 
 
 if __name__ == "__main__":
 
