@@ -16,7 +16,7 @@ def generate_conf():
 
     if api_id and api_hash:
 
-        with TelegramClient(StringSession(),api_id,api_hash) as client: 
+        with TelegramClient(StringSession(),int(api_id),api_hash) as client: 
             string_session = client.session.save() 
 
         parser['dark-send'] = {

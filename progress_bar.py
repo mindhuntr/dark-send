@@ -1,6 +1,5 @@
-from time import sleep 
-from threading import Thread
 from rich.progress import Progress, SpinnerColumn 
+from threading import Thread
 
 flag,prev_count,no_thread = False, 0, 0
 num_arr = []
@@ -28,7 +27,7 @@ def progress(current,total):
       if not bar_count in num_arr: 
           if not num_arr: 
               if bar_count == 100 and prev_count == 0: 
-                  for i in range(0,100): 
+                  for _ in range(0,100): 
                       while True: 
                           if flag == False: 
                               flag = True
@@ -40,7 +39,7 @@ def progress(current,total):
                    prev_count = bar_count
                    num_arr.append(bar_count) 
 
-                   for i in range(prev_count): 
+                   for _ in range(prev_count): 
                        while True: 
                            if flag == False: 
                                flag = True
@@ -48,7 +47,7 @@ def progress(current,total):
 
           else:
               if bar_count == 100:
-                  for i in range(prev_count,100): 
+                  for _ in range(prev_count,100): 
                       while True:
                           if flag == False: 
                               flag = True
@@ -58,7 +57,7 @@ def progress(current,total):
                   num_arr = [] 
 
               else: 
-                  for i in range(bar_count - prev_count): 
+                  for _ in range(bar_count - prev_count): 
                       while True: 
                           if flag == False: 
                               flag = True
@@ -76,7 +75,7 @@ def bar_func():
     with Progress(SpinnerColumn(),*Progress.get_default_columns()) as bar: 
         upload_task = bar.add_task("[green]Up/Down...",total=100) 
 
-        for i in range(0,100): 
+        for _ in range(0,100): 
             while True: 
                 if flag == True: 
                     bar.advance(upload_task)
