@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
 from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos
+from telethon.errors import FilePartsInvalidError
 from telethon import TelegramClient 
 from datetime import datetime 
 from inquirer import display_list
 from telethon.sessions import StringSession 
 from meta_data import meta_extract
 from argparse import ArgumentParser 
-from os import path 
-import progress_bar 
-import mimetypes
+from os import path, listdir
+import progress_bar, shutil, subprocess, mimetypes
+import tempfile
 import config 
 
 """ Get api id and hash from https://my.telegram.org """ 
@@ -149,25 +150,32 @@ async def main():
                     if path.exists(file):
                         for chat in chats:
                             if not args.quiet:
-                                file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
-                                try:
+                                try: 
+                                    file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
                                     await client.send_file(chat,file_handle,force_document=True) 
-                                except:
-                                    print("Unable to send files to chat. Choose a different chat") 
-                                    l_chats = await display_list(args.nchats,args.chats,chat_list)
-                                    if l_chats:
-                                        for l_chat in l_chats:
-                                            await client.send_file(l_chat,file_handle,force_document=True) 
+                                except FilePartsInvalidError: 
+                                    print("File too big. Splitting into parts...") 
+                                    part_files = rar_file(file) 
+
+                                    for part_file in part_files:
+                                        file_handle = await client.upload_file(part_file,progress_callback=progress_bar.progress,part_size_kb=512)
+                                        await client.send_file(chat,file_handle,force_document=True) 
+
+                                    shutil.rmtree(path.dirname(part_files[0]))
                             else:
-                                file_handle = await client.upload_file(file,part_size_kb=512)
-                                try:
+                                try: 
+                                    file_handle = await client.upload_file(file,part_size_kb=512)
                                     await client.send_file(chat,file_handle,force_document=True) 
-                                except:
-                                    print("Unable to send files to chat. Choose a different chat") 
-                                    l_chats = await display_list(args.nchats,args.chats,chat_list)
-                                    if l_chats:
-                                        for l_chat in l_chats:
-                                            await client.send_file(l_chat,file_handle,force_document=True) 
+
+                                except FilePartsInvalidError: 
+                                    print("File too big. Splitting into parts...") 
+                                    part_files = rar_file(file) 
+
+                                    for part_file in part_files:
+                                        file_handle = await client.upload_file(part_file,part_size_kb=512)
+                                        await client.send_file(chat,file_handle,force_document=True) 
+                                
+                                    shutil.rmtree(path.dirname(part_files[0]))
                     else:
                         print("{} doesnt exist".format(file)) 
 
@@ -180,9 +188,27 @@ async def main():
                 for file in args.file:
                     if path.exists(file):
                         if not args.quiet:
-                            files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
+                            try:
+                                files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
+                            except FilePartsInvalidError: 
+                                print("File too big. Splitting into parts...") 
+                                part_files = rar_file(file) 
+
+                                for part_file in part_files: 
+                                    files_uploaded.append(await client.upload_file(part_file,progress_callback=progress_bar.progress,part_size_kb=512))
+
+                                shutil.rmtree(path.dirname(part_files[0]))
                         else:
-                            files_uploaded.append(await client.upload_file(file,part_size_kb=512))
+                            try:
+                                files_uploaded.append(await client.upload_file(file,part_size_kb=512))
+                            except FilePartsInvalidError: 
+                                print("File too big. Splitting into parts...") 
+                                part_files = rar_file(file) 
+
+                                for part_file in part_files: 
+                                    files_uploaded.append(await client.upload_file(part_file,part_size_kb=512))
+
+                                shutil.rmtree(path.dirname(part_files[0]))
                     else:
                         print("{} doesnt exist".format(file)) 
                 
@@ -252,6 +278,26 @@ async def main():
                             
                         args.download_media.remove(message.id) 
 
+
+def rar_file(input_file): 
+    
+    try: 
+        subprocess.Popen(['rar',], stdout=subprocess.PIPE, stderr=subprocess.PIPE) 
+    except FileNotFoundError: 
+        print("rar not found. Please install")
+        exit(1)
+
+    arc_file = "/" + path.splitext(path.basename(input_file))[-2] + ".rar"
+    tmp_dir = tempfile.mkdtemp()
+    arc_path = tmp_dir + arc_file
+
+    subprocess.run(['rar', 'a', '-v2G', '-R', arc_path, input_file]) 
+
+    rar_files = []
+    for file in listdir(tmp_dir):
+        rar_files.append(tmp_dir + "/" + file) 
+
+    return rar_files
 
 if __name__ == "__main__":
 
