@@ -1,11 +1,17 @@
 from rich.progress import Progress, SpinnerColumn 
 from threading import Thread
 
-flag,prev_count,no_thread = False, 0, 0
+flag,prev_count,no_thread,album_count = False, 0, 0, None
 num_arr = []
 
 def percentage(part,whole): 
-    per_num = 100 * float(part)/float(whole)
+
+    global album_count 
+    if not album_count: 
+        album_count = whole
+
+    per_num = 100 * int(part)/int(album_count)
+    
     return int(per_num) 
 
 def progress(current,total):
@@ -16,6 +22,7 @@ def progress(current,total):
       global flag
       global prev_count
       global no_thread
+      global album_count 
 
       if no_thread == 0: 
           bar_thread = Thread(target=bar_func) 
@@ -26,13 +33,14 @@ def progress(current,total):
 
       if not bar_count in num_arr: 
           if not num_arr: 
-              if bar_count == 100 and prev_count == 0: 
+              if bar_count >= 100 and prev_count == 0: 
                   for _ in range(0,100): 
                       while True: 
                           if flag == False: 
                               flag = True
                               break
                   no_thread = 0
+                  album_count = None
 
               elif bar_count != 100: 
 
@@ -46,14 +54,14 @@ def progress(current,total):
                                break 
 
           else:
-              if bar_count == 100:
+              if bar_count >= 100:
                   for _ in range(prev_count,100): 
                       while True:
                           if flag == False: 
                               flag = True
                               break 
 
-                  no_thread,prev_count = 0, 0
+                  no_thread,prev_count,album_count = 0, 0, None
                   num_arr = [] 
 
               else: 

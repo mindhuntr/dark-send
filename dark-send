@@ -112,33 +112,23 @@ async def main():
                     if path.exists(image):
                         for chat in chats:
                             if not args.quiet:
-                                image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
-                                await client.send_file(chat,image_handle,image=True) 
+                                # image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
+                                await client.send_file(chat,image,image=True,progress_callback=progress_bar.progress,part_size_kb=512) 
                             else:
-                                image_handle = await client.upload_file(image,part_size_kb=512)
-                                await client.send_file(chat,image_handle,image=True) 
+                                # image_handle = await client.upload_file(image,part_size_kb=512)
+                                await client.send_file(chat,image,image=True,part_size_kb=512) 
                     else:
                         print("{} doesnt exist".format(image)) 
-
         else:                                                           # Send images as an album 
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list) 
-            files_uploaded = []
-            
+
             if chats:
-                for file in args.image:
-                    if path.exists(file):
-                        if not args.quiet:
-                            files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
-                        else:
-                            files_uploaded.append(await client.upload_file(file,part_size_kb=512))
-                    else:
-                        print("{} doesnt exist".format(file))
-
-                if files_uploaded:
-                    for chat in chats:
-                        await client.send_file(chat,files_uploaded,image=True)
-
+                for chat in chats:
+                    if not args.quiet:
+                        await client.send_file(chat,args.image,progress_callback=progress_bar.progress,part_size_kb=512,image=True)
+                    else: 
+                        await client.send_file(chat,args.image,part_size_kb=512,image=True)
 
     ## Send files 
     if args.file:
@@ -151,29 +141,29 @@ async def main():
                         for chat in chats:
                             if not args.quiet:
                                 try: 
-                                    file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
-                                    await client.send_file(chat,file_handle,force_document=True) 
+                                    # file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
+                                    await client.send_file(chat,file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
                                 except FilePartsInvalidError: 
                                     print("File too big. Splitting into parts...") 
                                     part_files = rar_file(file) 
 
                                     for part_file in part_files:
-                                        file_handle = await client.upload_file(part_file,progress_callback=progress_bar.progress,part_size_kb=512)
-                                        await client.send_file(chat,file_handle,force_document=True) 
+                                    #     file_handle = await client.upload_file(part_file,progress_callback=progress_bar.progress,part_size_kb=512)
+                                        await client.send_file(chat,part_file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
 
                                     shutil.rmtree(path.dirname(part_files[0]))
                             else:
                                 try: 
-                                    file_handle = await client.upload_file(file,part_size_kb=512)
-                                    await client.send_file(chat,file_handle,force_document=True) 
+                                   #  file_handle = await client.upload_file(file,part_size_kb=512)
+                                    await client.send_file(chat,file,force_document=True,part_size_kb=512) 
 
                                 except FilePartsInvalidError: 
                                     print("File too big. Splitting into parts...") 
                                     part_files = rar_file(file) 
 
                                     for part_file in part_files:
-                                        file_handle = await client.upload_file(part_file,part_size_kb=512)
-                                        await client.send_file(chat,file_handle,force_document=True) 
+                                    #    file_handle = await client.upload_file(part_file,part_size_kb=512)
+                                        await client.send_file(chat,part_file,force_document=True,part_size_kb=512) 
                                 
                                     shutil.rmtree(path.dirname(part_files[0]))
                     else:
@@ -182,46 +172,39 @@ async def main():
         else: 
             if not chats:
                 chats = await display_list(args.nchats,args.chats,chat_list) 
-            files_uploaded = []
+            files_to_upload = []
             
             if chats:
                 for file in args.file:
                     if path.exists(file):
-                        if not args.quiet:
-                            try:
-                                files_uploaded.append(await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512))
-                            except FilePartsInvalidError: 
-                                print("File too big. Splitting into parts...") 
-                                part_files = rar_file(file) 
+                        if path.getsize(file)/(1024*1024) >= 2000: 
+                            print("File too big. Splitting into parts....") 
+                            part_files = rar_file(file)
 
-                                for part_file in part_files: 
-                                    files_uploaded.append(await client.upload_file(part_file,progress_callback=progress_bar.progress,part_size_kb=512))
-
-                                shutil.rmtree(path.dirname(part_files[0]))
-                        else:
-                            try:
-                                files_uploaded.append(await client.upload_file(file,part_size_kb=512))
-                            except FilePartsInvalidError: 
-                                print("File too big. Splitting into parts...") 
-                                part_files = rar_file(file) 
-
-                                for part_file in part_files: 
-                                    files_uploaded.append(await client.upload_file(part_file,part_size_kb=512))
-
-                                shutil.rmtree(path.dirname(part_files[0]))
+                            for part_file in part_files: 
+                                files_to_upload.append(part_file) 
+                        else: 
+                            files_to_upload.append(file) 
                     else:
                         print("{} doesnt exist".format(file)) 
-                
-                if files_uploaded:
+
+                if files_to_upload:
                     for chat in chats:
-                        try:
-                            await client.send_file(chat,files_uploaded,force_document=True) 
-                        except:
-                            print("Unable to send files to chat. Choose a different chat") 
-                            l_chats = await display_list(args.nchats,args.chats,chat_list)
-                            if l_chats:
-                                for l_chat in l_chats:
-                                    await client.send_file(l_chat,files_uploaded,force_document=True) 
+                        if not args.quiet:
+                            await client.send_file(chat,files_to_upload,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
+                        else: 
+                            await client.send_file(chat,files_to_upload,force_document=True,part_size_kb=512) 
+                            
+                    rm_dirs = []
+                    for file in files_to_upload: 
+                        if '/tmp/' in file: 
+                            if path.basename(file) not in rm_dirs:
+                                rm_dirs.append(path.basename(file))
+
+                    for dir in rm_dirs: 
+                        res = input("Would you like to remove {}? (y/n).".format(dir))
+                        if res.lower() == 'y':
+                            shutil.rmtree(dir)
 
     if args.download_images: 
 
