@@ -140,29 +140,25 @@ async def main():
                     if path.exists(file):
                         for chat in chats:
                             if not args.quiet:
-                                try: 
-                                    # file_handle = await client.upload_file(file,progress_callback=progress_bar.progress,part_size_kb=512)
+                                if path.getsize(file)/(1024*1024) < 2000: 
                                     await client.send_file(chat,file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
-                                except FilePartsInvalidError: 
+                                else: 
                                     print("File too big. Splitting into parts...") 
                                     part_files = rar_file(file) 
 
                                     for part_file in part_files:
-                                    #     file_handle = await client.upload_file(part_file,progress_callback=progress_bar.progress,part_size_kb=512)
                                         await client.send_file(chat,part_file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
 
                                     shutil.rmtree(path.dirname(part_files[0]))
                             else:
-                                try: 
-                                   #  file_handle = await client.upload_file(file,part_size_kb=512)
+                                if path.getsize(file)/(1024*1024) < 2000: 
                                     await client.send_file(chat,file,force_document=True,part_size_kb=512) 
 
-                                except FilePartsInvalidError: 
+                                else: 
                                     print("File too big. Splitting into parts...") 
                                     part_files = rar_file(file) 
 
                                     for part_file in part_files:
-                                    #    file_handle = await client.upload_file(part_file,part_size_kb=512)
                                         await client.send_file(chat,part_file,force_document=True,part_size_kb=512) 
                                 
                                     shutil.rmtree(path.dirname(part_files[0]))
