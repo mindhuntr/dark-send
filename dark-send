@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos
-from telethon.errors import FilePartsInvalidError
 from telethon import TelegramClient 
 from datetime import datetime 
 from inquirer import display_list
@@ -10,8 +9,7 @@ from meta_data import meta_extract
 from argparse import ArgumentParser 
 from os import path, listdir
 import progress_bar, shutil, subprocess, mimetypes
-import tempfile
-import config 
+import tempfile, config, sys
 
 """ Get api id and hash from https://my.telegram.org """ 
 
@@ -38,12 +36,14 @@ async def main():
             dialog.name:dialog.id async for dialog in client.iter_dialogs(args.nchats)
             }
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+    elif not chats:
+        chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list 
+
     ## Send Message 
 
     if args.message:
-        if not chats:
-            chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list 
-
         if chats:
             for message in args.message: 
                 for chat in chats:
@@ -52,9 +52,6 @@ async def main():
     ## Send Videos 
     
     if args.video:
-        if not chats:
-            chats = await display_list(args.nchats,args.chats,chat_list)  
-
         if chats:
             for video in args.video: 
                 if path.exists(video):
@@ -72,9 +69,6 @@ async def main():
     ## Send both videos and images as compressed 
 
     if args.compressed: 
-        if not chats:
-            chats = await display_list(args.nchats,args.chats,chat_list)
-
         if chats:
             for comps in args.compressed: 
                 if path.exists(comps):
@@ -105,8 +99,6 @@ async def main():
 
     if args.image:
         if not args.album:
-            if not chats:
-                chats = await display_list(args.nchats,args.chats,chat_list) 
             if chats:
                 for image in args.image:
                     if path.exists(image):
@@ -120,9 +112,6 @@ async def main():
                     else:
                         print("{} doesnt exist".format(image)) 
         else:                                                           # Send images as an album 
-            if not chats:
-                chats = await display_list(args.nchats,args.chats,chat_list) 
-
             if chats:
                 for chat in chats:
                     if not args.quiet:
@@ -133,54 +122,23 @@ async def main():
     ## Send files 
     if args.file:
         if not args.album:
-            if not chats:
-                chats = await display_list(args.nchats,args.chats,chat_list) 
             if chats:
                 for file in args.file:
                     if path.exists(file):
                         for chat in chats:
                             if not args.quiet:
-                                if path.getsize(file)/(1024*1024) < 2000: 
-                                    await client.send_file(chat,file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
-                                else: 
-                                    print("File too big. Splitting into parts...") 
-                                    part_files = rar_file(file) 
-
-                                    for part_file in part_files:
-                                        await client.send_file(chat,part_file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
-
-                                    shutil.rmtree(path.dirname(part_files[0]))
+                                await client.send_file(chat,file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
                             else:
-                                if path.getsize(file)/(1024*1024) < 2000: 
-                                    await client.send_file(chat,file,force_document=True,part_size_kb=512) 
-
-                                else: 
-                                    print("File too big. Splitting into parts...") 
-                                    part_files = rar_file(file) 
-
-                                    for part_file in part_files:
-                                        await client.send_file(chat,part_file,force_document=True,part_size_kb=512) 
-                                
-                                    shutil.rmtree(path.dirname(part_files[0]))
+                                await client.send_file(chat,file,force_document=True,part_size_kb=512) 
                     else:
                         print("{} doesnt exist".format(file)) 
 
         else: 
-            if not chats:
-                chats = await display_list(args.nchats,args.chats,chat_list) 
             files_to_upload = []
-            
             if chats:
                 for file in args.file:
                     if path.exists(file):
-                        if path.getsize(file)/(1024*1024) >= 2000: 
-                            print("File too big. Splitting into parts....") 
-                            part_files = rar_file(file)
-
-                            for part_file in part_files: 
-                                files_to_upload.append(part_file) 
-                        else: 
-                            files_to_upload.append(file) 
+                        files_to_upload.append(file) 
                     else:
                         print("{} doesnt exist".format(file)) 
 
@@ -191,22 +149,7 @@ async def main():
                         else: 
                             await client.send_file(chat,files_to_upload,force_document=True,part_size_kb=512) 
                             
-                    rm_dirs = []
-                    for file in files_to_upload: 
-                        if '/tmp/' in file: 
-                            if path.basename(file) not in rm_dirs:
-                                rm_dirs.append(path.basename(file))
-
-                    for dir in rm_dirs: 
-                        res = input("Would you like to remove {}? (y/n).".format(dir))
-                        if res.lower() == 'y':
-                            shutil.rmtree(dir)
-
     if args.download_images: 
-
-        if not chats:
-            chats = await display_list(args.nchats,args.chats,chat_list)  
-
         if chats:
             for chat in chats: 
                 async for message in client.iter_messages(chat,filter=InputMessagesFilterPhotos):
@@ -218,10 +161,6 @@ async def main():
                         await client.download_media(message,file,progress_callback=progress_bar.progress) 
 
     if args.download_media: 
-
-        if not chats: 
-            chats = await display_list(args.nchats,args.chats,chat_list)
-
         if chats:
             for chat in chats: 
                 async for message in client.iter_messages(chat): 
@@ -257,26 +196,6 @@ async def main():
                             
                         args.download_media.remove(message.id) 
 
-
-def rar_file(input_file): 
-    
-    try: 
-        subprocess.Popen(['rar',], stdout=subprocess.PIPE, stderr=subprocess.PIPE) 
-    except FileNotFoundError: 
-        print("rar not found. Please install")
-        exit(1)
-
-    arc_file = "/" + path.splitext(path.basename(input_file))[-2] + ".rar"
-    tmp_dir = tempfile.mkdtemp()
-    arc_path = tmp_dir + arc_file
-
-    subprocess.run(['rar', 'a', '-v2G', '-R', arc_path, input_file]) 
-
-    rar_files = []
-    for file in listdir(tmp_dir):
-        rar_files.append(tmp_dir + "/" + file) 
-
-    return rar_files
 
 if __name__ == "__main__":
 
