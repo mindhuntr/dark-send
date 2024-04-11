@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos
-from telethon import TelegramClient 
+from telethon.tl import types 
+from FastTelethon import upload_file 
+from telethon import TelegramClient, utils
 from datetime import datetime 
 from inquirer import display_list
 from telethon.sessions import StringSession 
 from meta_data import meta_extract
 from argparse import ArgumentParser 
-from os import path, listdir
-import progress_bar, shutil, subprocess, mimetypes
-import tempfile, config, sys
+from os import path
+import progress_bar, mimetypes
+import config, sys
 
 """ Get api id and hash from https://my.telegram.org """ 
 
@@ -35,6 +37,10 @@ async def main():
     chat_list = { 
             dialog.name:dialog.id async for dialog in client.iter_dialogs(args.nchats)
             }
+
+    # var = await client(GetForumTopicsByIDRequest(channel=chat_list['Siccsegv Board'],topics=[1]))
+    # print(var.stringify())
+
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -77,20 +83,19 @@ async def main():
                         for chat in chats:
                             if not args.quiet:
                                 image_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
-                                await client.send_file(chat,image_handle,image=True) 
                             else:
                                 image_handle = await client.upload_file(comps,part_size_kb=512)
-                                await client.send_file(chat,image_handle,image=True) 
+
+                            await client.send_file(chat,image_handle,image=True) 
 
                     if mime_out and mime_out.split('/')[0] == "video": # Check if video 
                             height, width, duration = meta_extract(comps)  # Extract metadata 
                             for chat in chats:
                                 if not args.quiet:
                                     video_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
-                                    await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
                                 else:
                                     video_handle = await client.upload_file(comps,part_size_kb=512)
-                                    await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                                await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
 
                 else:
                     print("{} doesnt exist".format(comps)) 
@@ -126,10 +131,22 @@ async def main():
                 for file in args.file:
                     if path.exists(file):
                         for chat in chats:
-                            if not args.quiet:
-                                await client.send_file(chat,file,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512) 
-                            else:
-                                await client.send_file(chat,file,force_document=True,part_size_kb=512) 
+                            with open(file, 'rb') as f_obj: 
+                                if not args.quiet:
+                                    res = await upload_file(client, f_obj, progress_callback=progress_bar.progress) 
+                                else: 
+                                    res = await upload_file(client, f_obj) 
+
+                                attributes, mime_type = utils.get_attributes(
+                                    file,
+                                )
+                                media = types.InputMediaUploadedDocument(
+                                    file=res,
+                                    mime_type=mime_type,
+                                    attributes=attributes,
+                                    force_file=True
+                                )
+                                await client.send_file(chat,media) 
                     else:
                         print("{} doesnt exist".format(file)) 
 
