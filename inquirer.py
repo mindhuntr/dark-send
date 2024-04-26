@@ -1,14 +1,16 @@
-from PyInquirer import style_from_dict, Token, prompt
+from InquirerPy import inquirer
+from InquirerPy.base.control import Choice
+from InquirerPy.separator import Separator
 
-style = style_from_dict({
-    Token.Separator: '#96cdfb',
-    Token.QuestionMark: '#673ab7 bold',
-    Token.Selected: '#96cdfb',  # default
-    Token.Pointer: '#673ab7 bold',
-    Token.Instruction: '',  # default
-    Token.Answer: '#f44336 bold',
-    Token.Question: '',
-})
+# style = style_from_dict({
+#     Token.Separator: '#96cdfb',
+#     Token.QuestionMark: '#673ab7 bold',
+#     Token.Selected: '#96cdfb',  # default
+#     Token.Pointer: '#673ab7 bold',
+#     Token.Instruction: '',  # default
+#     Token.Answer: '#f44336 bold',
+#     Token.Question: '',
+# })
 
 
 async def display_list(no_chats,chats,id_list):
@@ -17,38 +19,30 @@ async def display_list(no_chats,chats,id_list):
         no_chats = 15
 
     if chats:
-        peers = []
+        peers = [] 
         for chat in chats:
             peers.append(id_list[chat])
 
         return peers
 
-    dist = []
+    chat_names = []
     for key in id_list.keys():
-        tmp = {}
-        tmp['name'] = key
-        dist.append(tmp)
+        chat_names.append(key)
 
-    questions = [
-    {
-    'type': 'checkbox',
-    'message': 'Select chat',
-    'name': 'Chats',
-    'choices': dist,
-    'validate': lambda answer: 'Choose atleast one chat' \
-            if len(answer) == 0 else True
-            }
-    ]
+    answers = await inquirer.checkbox(
+    message="Select a Chat:",
+    choices=chat_names,
+    validate=lambda result: len(result) >= 1,
+    invalid_message="should be at least 1 selection",
+    instruction="(select at least 1)",
+    ).execute_async()
 
-    answers = prompt(questions,style=style)
     peers = []
 
     if answers:
-        for val in answers.values():
-            for answer in val:
-                peers.append(id_list[answer]) 
-
-            return peers
+        for answer in answers:
+            peers.append(id_list[answer]) 
+        return peers
     else:
         exit(1) 
 
