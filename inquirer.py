@@ -29,12 +29,14 @@ async def display_list(no_chats,chats,id_list):
     for key in id_list.keys():
         chat_names.append(key)
 
-    answers = await inquirer.checkbox(
+    answers = await inquirer.fuzzy(
     message="Select a Chat:",
     choices=chat_names,
+    multiselect=True,
     validate=lambda result: len(result) >= 1,
-    invalid_message="should be at least 1 selection",
-    instruction="(select at least 1)",
+    invalid_message="Select atleast one",
+    instruction="(TAB to select)",
+    max_height="50%",
     ).execute_async()
 
     peers = []
