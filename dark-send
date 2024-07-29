@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos
+from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos, MessageMediaDocument, MessageMediaPhoto
+from telethon.tl.patched import Message
 from telethon.tl import types 
 from FastTelethon import upload_file 
 from telethon import TelegramClient, utils
@@ -9,6 +10,7 @@ from inquirer import display_list
 from telethon.sessions import StringSession 
 from meta_data import meta_extract, extract_thumb
 from argparse import ArgumentParser 
+from time import sleep
 from os import path
 import progress_bar, mimetypes
 import config, sys
@@ -219,6 +221,24 @@ async def main():
                                 continue 
                             
                         args.download_media.remove(message.id) 
+
+#     if args.clone: 
+#         chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list  
+#         dest_chat = await display_list(args.nchats,args.chats,chat_list) # Display chat list  
+#         album = []
+# 
+#         for chat in chats: 
+#             async for message in client.iter_messages(chat,min_id=14171,reverse=True): 
+#                 if type(message) is Message:
+#                     if type(message.media) is MessageMediaPhoto:
+#                         if album: 
+#                             await client.forward_messages(dest_chat[0], album, drop_author=True) 
+#                             sleep(1) 
+#                             album = []
+#                         await client.send_message(dest_chat[0], message) 
+# 
+#                     if type(message.media) is MessageMediaDocument: 
+#                         album.append(message) 
 
 
 if __name__ == "__main__":
