@@ -139,22 +139,22 @@ async def main():
             if chats:
                 for file in args.file:
                     if path.exists(file):
-                        for chat in chats:
-                            with open(file, 'rb') as f_obj: 
-                                if not args.quiet:
-                                    res = await upload_file(client, f_obj, progress_callback=progress_bar.progress) 
-                                else: 
-                                    res = await upload_file(client, f_obj) 
+                        with open(file, 'rb') as f_obj: 
+                            if not args.quiet:
+                                res = await upload_file(client, f_obj, progress_callback=progress_bar.progress) 
+                            else: 
+                                res = await upload_file(client, f_obj) 
 
-                                attributes, mime_type = utils.get_attributes(
-                                    file,
-                                )
-                                media = types.InputMediaUploadedDocument(
-                                    file=res,
-                                    mime_type=mime_type,
-                                    attributes=attributes,
-                                    force_file=True
-                                )
+                            attributes, mime_type = utils.get_attributes(
+                                file,
+                            )
+                            media = types.InputMediaUploadedDocument(
+                                file=res,
+                                mime_type=mime_type,
+                                attributes=attributes,
+                                force_file=True
+                            )
+                        for chat in chats:
                                 await client.send_file(chat,media,caption=args.caption[0]) 
                     else:
                         print("{} doesnt exist".format(file)) 
