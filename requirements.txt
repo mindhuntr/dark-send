@@ -1,5 +1,8 @@
 hachoir==3.2.0
 InquirerPy==0.3.4
-mautrix==0.20.4
-rich==13.7.1
-Telethon==1.35.0
+mautrix==0.20.6
+moviepy==1.0.3
+Pillow==11.0.0
+rich==13.9.3
+Telethon==1.37.0
+tqdm==4.66.5
