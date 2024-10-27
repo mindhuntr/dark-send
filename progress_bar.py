@@ -25,7 +25,7 @@ def progress(downloaded,fileSize):
     bars = int(percent/5)
 
     if progress_bar is None: 
-        progress_bar = tqdm(range(100), bar_format='{l_bar}{bar:40}{r_bar}{bar:-40b}') 
+        progress_bar = tqdm(range(100), bar_format='{l_bar}{bar:40}{r_bar}{bar:-40b}',colour="#eba0ac",ascii="░▒█") 
 
     progress_bar.n = percent
     progress_bar.refresh()
