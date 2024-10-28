@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 
 from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos, MessageMediaDocument, MessageMediaPhoto
-from telethon.tl.patched import Message
-from telethon.tl import types 
-from FastTelethon import upload_file 
-from telethon import TelegramClient, utils
-from datetime import datetime 
-from inquirer import display_list
-from telethon.sessions import StringSession 
+from telethon.tl.functions.channels import GetForumTopicsByIDRequest, GetForumTopicsRequest
 from meta_data import meta_extract, extract_thumb
+from telethon.sessions import StringSession 
+from telethon import TelegramClient, utils
+from telethon.tl.patched import Message
+from FastTelethon import upload_file 
 from argparse import ArgumentParser 
+from inquirer import display_list
+import progress_bar, mimetypes
+from datetime import datetime
+from telethon.tl import types 
+from datetime import datetime 
 from time import sleep
 from os import path
-import progress_bar, mimetypes
 import config, sys
 
 """ Get api id and hash from https://my.telegram.org """ 
@@ -35,20 +37,23 @@ async def main():
     parser.add_argument('--download-media',type=int,nargs="+",help="download selected media from chats (use message id)") 
 
     chats = [] 
+    chat_list = {}
     mimetypes.init()
     args = parser.parse_args() 
 
-
-    chat_list = { 
-            dialog.name:dialog.id async for dialog in client.iter_dialogs(args.nchats)
-            }
+    async for dialog in client.iter_dialogs(args.nchats): 
+        if not hasattr(dialog.entity, "forum"): 
+            chat_list[dialog.name] = dialog.id
+        else: 
+            if dialog.entity.forum: 
+                topic_obj = await client(GetForumTopicsRequest(channel=dialog.id,offset_date=datetime.now(),offset_id=1, offset_topic=1,limit=100))
+                topics = [ {topic.title: topic.id} for topic in topic_obj.topics ]
+                chat_list[dialog.name] = [ dialog.id, topics ]
+            else: 
+                chat_list[dialog.name] = dialog.id
     
     if not args.caption:
         args.caption = [ None ]
-
-    # var = await client(GetForumTopicsByIDRequest(channel=chat_list['Siccsegv Board'],topics=[1]))
-    # print(var.stringify())
-
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -61,7 +66,7 @@ async def main():
         if chats:
             for message in args.message: 
                 for chat in chats:
-                    await client.send_message(chat,message) # Send message to selected chats
+                    await client.send_message(chat[0],message,reply_to=chat[1]) # Send message to selected chats
 
     ## Send Videos 
     
@@ -74,10 +79,10 @@ async def main():
                     for chat in chats:
                         if not args.quiet:
                             video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512) # Upload video with progress 
-                            await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),caption=args.caption[0],thumb=thumb) # Send the video
+                            await client.send_file(chat[0],video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),caption=args.caption[0],thumb=thumb,reply_to=chat[1]) # Send the video
                         else:
                             video_handle = await client.upload_file(video,part_size_kb=512) # Upload video without progress 
-                            await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),caption=args.caption[0]) 
+                            await client.send_file(chat[0],video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),caption=args.caption[0], reply_to=chat[1]) 
                 else:
                     print("{} doesnt exist".format(video)) 
 
@@ -95,7 +100,7 @@ async def main():
                             else:
                                 image_handle = await client.upload_file(comps,part_size_kb=512)
 
-                            await client.send_file(chat,image_handle,image=True) 
+                            await client.send_file(chat[0],image_handle,image=True, reply_to=chat[1]) 
 
                     if mime_out and mime_out.split('/')[0] == "video": # Check if video 
                             height, width, duration = meta_extract(comps)  # Extract metadata 
@@ -104,7 +109,7 @@ async def main():
                                     video_handle = await client.upload_file(comps,progress_callback=progress_bar.progress,part_size_kb=512)
                                 else:
                                     video_handle = await client.upload_file(comps,part_size_kb=512)
-                                await client.send_file(chat,video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),)) 
+                                await client.send_file(chat[0],video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),reply_to=chat[1]) 
 
                 else:
                     print("{} doesnt exist".format(comps)) 
@@ -119,19 +124,19 @@ async def main():
                         for chat in chats:
                             if not args.quiet:
                                 # image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
-                                await client.send_file(chat,image,image=True,progress_callback=progress_bar.progress,part_size_kb=512,caption=args.caption[0]) 
+                                await client.send_file(chat[0],image,image=True,progress_callback=progress_bar.progress,part_size_kb=512,caption=args.caption[0],reply_to=chat[1]) 
                             else:
                                 # image_handle = await client.upload_file(image,part_size_kb=512)
-                                await client.send_file(chat,image,image=True,part_size_kb=512,caption=args.caption[0]) 
+                                await client.send_file(chat[0],image,image=True,part_size_kb=512,caption=args.caption[0],replay_to=chat[1]) 
                     else:
                         print("{} doesnt exist".format(image)) 
         else:                                                           # Send images as an album 
             if chats:
                 for chat in chats:
                     if not args.quiet:
-                        await client.send_file(chat,args.image,progress_callback=progress_bar.progress,part_size_kb=512,image=True,caption=args.caption)
+                        await client.send_file(chat[0],args.image,progress_callback=progress_bar.progress,part_size_kb=512,image=True,caption=args.caption,reply_to=chat[1])
                     else: 
-                        await client.send_file(chat,args.image,part_size_kb=512,image=True,caption=args.caption)
+                        await client.send_file(chat[0],args.image,part_size_kb=512,image=True,caption=args.caption,reply_to=chat[1])
 
     ## Send files 
     if args.file:
@@ -155,7 +160,7 @@ async def main():
                                 force_file=True
                             )
                         for chat in chats:
-                                await client.send_file(chat,media,caption=args.caption[0]) 
+                                await client.send_file(chat[0],media,caption=args.caption[0],reply_to=chat[1]) 
                     else:
                         print("{} doesnt exist".format(file)) 
 
@@ -171,9 +176,9 @@ async def main():
                 if files_to_upload:
                     for chat in chats:
                         if not args.quiet:
-                            await client.send_file(chat,files_to_upload,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512,caption=args.caption) 
+                            await client.send_file(chat[0],files_to_upload,force_document=True,progress_callback=progress_bar.progress,part_size_kb=512,caption=args.caption,reply_to=chat[1]) 
                         else: 
-                            await client.send_file(chat,files_to_upload,force_document=True,part_size_kb=512,caption=args.caption) 
+                            await client.send_file(chat[0],files_to_upload,force_document=True,part_size_kb=512,caption=args.caption,reply_to=chat[1]) 
                             
     if args.download_images: 
         if chats:
