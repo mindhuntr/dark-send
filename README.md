@@ -18,21 +18,22 @@ Display help:
 ``` shell 
 dark-send --help 
 ``` 
-
 To send a message:
 ``` shell
-dark-send "Hello!" 
+dark-send "hello" 
 ``` 
+![Demo](./demos/send.gif)
 
 To send a file: 
 ``` shell 
 dark-send -f /path/to/file 
-``` 
 
+``` 
 To send files as album: 
 ``` shell 
 dark-send -a -f /path/to/file /path/to/file 
 ``` 
+![Demo](./demos/send_file.gif)
 
 To send a video: 
 ``` shell 

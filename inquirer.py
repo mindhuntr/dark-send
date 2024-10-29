@@ -47,7 +47,7 @@ async def display_list(no_chats,chats,id_list):
         chat_names.append(key)
 
     answers = await inquirer.fuzzy(
-    message="Select a Chat:",
+    message="Select Chat(s):",
     choices=chat_names,
     multiselect=True,
     validate=lambda result: len(result) >= 1,
