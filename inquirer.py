@@ -12,7 +12,7 @@ async def display_list(no_chats,chats,id_list):
         peers = [] 
         for chat in chats:
             if isinstance(id_list[chat], int):
-                peers.append(id_list[chat])
+                peers.append([ id_list[chat], None ])
             else: 
                 topic_dict = {}
                 for topic in id_list[chat][1]: 
