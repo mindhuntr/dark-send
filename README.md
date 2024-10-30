@@ -20,7 +20,7 @@ dark-send --help
 ``` 
 To send a message:
 ``` shell
-dark-send "hello" 
+dark-send Hello!
 ``` 
 ![Demo](./demos/send.gif)
 
