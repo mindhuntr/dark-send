@@ -2,16 +2,6 @@ from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
 from InquirerPy.separator import Separator
 
-# style = style_from_dict({
-#     Token.Separator: '#96cdfb',
-#     Token.QuestionMark: '#673ab7 bold',
-#     Token.Selected: '#96cdfb',  # default
-#     Token.Pointer: '#673ab7 bold',
-#     Token.Instruction: '',  # default
-#     Token.Answer: '#f44336 bold',
-#     Token.Question: '',
-# })
-
 
 async def display_list(no_chats,chats,id_list):
 
@@ -83,5 +73,4 @@ async def display_list(no_chats,chats,id_list):
         return peers
     else:
         exit(1) 
-
 

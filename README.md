@@ -35,13 +35,11 @@ dark-send -a -f /path/to/file /path/to/file
 ``` 
 ![Demo](./demos/send_file.gif)
 
-To send a video: 
-``` shell 
-dark-send -v /path/to/file 
-``` 
-
 To send a file directly without selecting from the list
 ``` shell 
 dark-send -f /path/to/file -c "Alienists" 
 ```
+You can also send messages or files to topics within a group 
+
+![Demo](./demos/send_topic.gif)
 

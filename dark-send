@@ -41,6 +41,10 @@ async def main():
     mimetypes.init()
     args = parser.parse_args() 
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        exit()
+
     async for dialog in client.iter_dialogs(args.nchats): 
         if not hasattr(dialog.entity, "forum"): 
             chat_list[dialog.name] = dialog.id
@@ -55,9 +59,7 @@ async def main():
     if not args.caption:
         args.caption = [ None ]
 
-    if len(sys.argv) == 1:
-        parser.print_help()
-    elif not chats:
+    if not chats:
         chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list 
 
     ## Send Message 

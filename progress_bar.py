@@ -34,5 +34,3 @@ def progress(downloaded,fileSize):
         progress_bar.close()
         progress_bar = None 
 
-
-    
