@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos, MessageMediaDocument, MessageMediaPhoto
-from telethon.tl.functions.channels import GetForumTopicsByIDRequest, GetForumTopicsRequest
-from meta_data import meta_extract, extract_thumb
+from telethon.tl.types import DocumentAttributeVideo,InputMessagesFilterPhotos 
+from telethon.tl.functions.channels import GetForumTopicsRequest
+from meta_data import meta_extract
 from telethon.sessions import StringSession 
 from telethon import TelegramClient, utils
 from telethon.tl.patched import Message
@@ -32,7 +32,6 @@ async def main():
     parser.add_argument('-t','--caption',type=str,nargs="*",help="caption for file")
     parser.add_argument('-a','--album',action="store_true",help="send files as albums") 
     parser.add_argument('-q','--quiet',action="store_true",help="suppress progress bar") 
-    parser.add_argument('-tl','--thumbnail',type=str, nargs="?", help="custom thumbnail for video") 
     parser.add_argument('--download-images',action="store_true",help="download photos from selected chats") 
     parser.add_argument('--download-media',type=int,nargs="+",help="download selected media from chats (use message id)") 
 
@@ -55,7 +54,7 @@ async def main():
                 chat_list[dialog.name] = [ dialog.id, topics ]
             else: 
                 chat_list[dialog.name] = dialog.id
-    
+
     if not args.caption:
         args.caption = [ None ]
 
@@ -77,11 +76,10 @@ async def main():
             for video in args.video: 
                 if path.exists(video):
                     height, width, duration = meta_extract(video) # Extract metadata for video
-                    thumb = extract_thumb(args.thumbnail, video) 
                     for chat in chats:
                         if not args.quiet:
                             video_handle = await client.upload_file(video,progress_callback=progress_bar.progress,part_size_kb=512) # Upload video with progress 
-                            await client.send_file(chat[0],video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),caption=args.caption[0],thumb=thumb,reply_to=chat[1]) # Send the video
+                            await client.send_file(chat[0],video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),caption=args.caption[0],reply_to=chat[1]) # Send the video
                         else:
                             video_handle = await client.upload_file(video,part_size_kb=512) # Upload video without progress 
                             await client.send_file(chat[0],video_handle,video=True,attributes=(DocumentAttributeVideo(duration,width,height,supports_streaming=True),),caption=args.caption[0], reply_to=chat[1]) 
@@ -264,8 +262,7 @@ if __name__ == "__main__":
         api_hash = config.parser.get('dark-send','api_hash') 
         string = config.parser.get('dark-send','string_session') 
 
-    client = TelegramClient(StringSession(string), api_id, api_hash) 
-
-    with client:
+    with TelegramClient(StringSession(string), api_id, api_hash) as client:
         client.loop.run_until_complete(main())
+
 
