@@ -24,9 +24,9 @@ dark-send Hello!
 ``` 
 ![Demo](./demos/send.gif)
 
-To send a file: 
+To send an image: 
 ``` shell 
-dark-send -f /path/to/file 
+dark-send -i /path/to/image 
 
 ``` 
 To send files as album: 
@@ -35,9 +35,9 @@ dark-send -a -f /path/to/file /path/to/file
 ``` 
 ![Demo](./demos/send_file.gif)
 
-To send a file directly without selecting from the list
+To send a video directly without selecting from the chats list
 ``` shell 
-dark-send -f /path/to/file -c "Alienists" 
+dark-send -v /path/to/file -c "Alienists" 
 ```
 You can also send messages or files to topics within a group 
 
