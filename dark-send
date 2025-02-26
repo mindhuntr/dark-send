@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from telethon.tl.types import DocumentAttributeVideo, InputMessagesFilterPhotos
+from telethon.tl.types import DocumentAttributeVideo, InputMessagesFilterPhotos, InputMessagesFilterMusic
+from telethon.tl.types import InputMessagesFilterVideo, InputMessagesFilterDocument
 from telethon.tl.functions.channels import GetForumTopicsRequest
 from meta_data import meta_extract
 from telethon.sessions import StringSession
@@ -33,8 +34,7 @@ async def main():
     parser.add_argument('-t', '--caption', type=str, nargs="*", help="caption for file")
     parser.add_argument('-a', '--album', action="store_true", help="send files as albums")
     parser.add_argument('-q', '--quiet', action="store_true", help="suppress progress bar")
-    parser.add_argument('--download-images', action="store_true", help="download photos from selected chats")
-    parser.add_argument('--download-all-media', action="store_true", help="download all media from chats")
+    parser.add_argument('--download-media', choices=['image', 'video', 'file', 'audio', 'all'] , help="download all media from chats")
 
     chats = []
     chat_list = {}
@@ -246,59 +246,52 @@ async def main():
                         )
 
     async def download_images(chats):
-        if chats:
-            for chat in chats:
-                async for message in client.iter_messages(chat, filter=InputMessagesFilterPhotos):
-                    now = datetime.now()
-                    current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+        for chat in chats:
+            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterPhotos):
+                now = datetime.now()
+                current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
-                    file_name = "image_" + current_time + ".jpg"
-                    with open(file_name, 'wb') as file:
-                        await client.download_media(
-                            message, file,
-                            progress_callback=progress_bar.progress
-                        )
+                file_name = "image_" + current_time + ".jpg"
+                with open(file_name, 'wb') as file:
+                    await client.download_media(
+                        message, file,
+                        progress_callback=progress_bar.progress
+                    )
+    async def download_videos(chats):
+        for chat in chats:
+            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterVideo):
+                now = datetime.now()
+                current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+
+                file_name = "video" + current_time + ".mp4"
+                with open(file_name, 'wb') as file:
+                    await client.download_media(
+                        message, file,
+                        progress_callback=progress_bar.progress
+                    )
+    async def download_audio(chats): 
+        for chat in chats:
+            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterMusic):
+                with open(message.file.name, 'wb') as file:
+                    await client.download_media(
+                        message, file,
+                        progress_callback=progress_bar.progress
+                    )
+
+    async def download_documents(chats): 
+        for chat in chats:
+            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterDocument):
+                with open(message.file.name, 'wb') as file:
+                    await client.download_media(
+                        message, file,
+                        progress_callback=progress_bar.progress
+                    )
 
     async def download_all_media(chats):
-        for chat in chats:
-            async for message in client.iter_messages(chat[0]):
-                try:
-                    if message.media.document.mime_type:
-                        tp, _ = message.media.document.mime_type.split('/')
-                        if tp == "application":
-                            file_name = message.file.name
-                            with open(file_name, 'wb') as file:
-                                await client.download_media(
-                                    message, file,
-                                    progress_callback=progress_bar.progress
-                                )
-
-                        elif tp == "video":
-                            now = datetime.now()
-                            current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
-
-                            file_name = "video_" + current_time + ".mp4"
-                            with open(file_name, 'wb') as file:
-                                await client.download_media(
-                                    message, file,
-                                    progress_callback=progress_bar.progress
-                                )
-
-                except AttributeError:
-
-                    if hasattr(message.media, 'photo'):
-                        now = datetime.now()
-                        current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
-                        file_name = "image_" + current_time + ".jpg"
-
-                        with open(file_name, 'wb') as file:
-                            await client.download_media(
-                                message, file,
-                                progress_callback=progress_bar.progress
-                            )
-
-                    else:
-                        continue
+        await download_images(chats)
+        await download_videos(chats)
+        await download_audio(chats)
+        await download_documents(chats)
 
     if args.message:
         await send_message(chats, args.message)
@@ -310,11 +303,16 @@ async def main():
         await send_images(chats, args.image)
     if args.file:
         await send_files(chats, args.file)
-    if args.download_images:
+    if args.download_media == "image":
         await download_images(chats)
-    if args.download_all_media:
-        await download_all_media(chats)
-
+    if args.download_media == "video":
+        await download_videos(chats)
+    if args.download_media == "audio":
+        await download_audio(chats)
+    if args.download_media == "file":
+        await download_documents(chats)
+    if args.download_media == "all":
+        await download_all_media()
 
 #     if args.clone:
 #         chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list
