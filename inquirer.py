@@ -1,6 +1,4 @@
 from InquirerPy import inquirer
-from InquirerPy.base.control import Choice
-from InquirerPy.separator import Separator
 
 
 async def display_list(no_chats,chats,id_list):
