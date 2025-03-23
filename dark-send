@@ -272,7 +272,7 @@ async def main():
     async def download_audio(chats): 
         for chat in chats:
             async for message in client.iter_messages(chat[0], filter=InputMessagesFilterMusic):
-                with open(message.file.name.strip('/'), 'wb') as file:
+                with open(message.file.name.replace('/','-'), 'wb') as file:
                     await client.download_media(
                         message, file,
                         progress_callback=progress_bar.progress
@@ -281,7 +281,7 @@ async def main():
     async def download_documents(chats): 
         for chat in chats:
             async for message in client.iter_messages(chat[0], filter=InputMessagesFilterDocument):
-                with open(message.file.name.strip('/'), 'wb') as file:
+                with open(message.file.name.replace('/','-'), 'wb') as file:
                     await client.download_media(
                         message, file,
                         progress_callback=progress_bar.progress
