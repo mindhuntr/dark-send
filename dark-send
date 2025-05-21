@@ -312,7 +312,7 @@ async def main():
     if args.download_media == "file":
         await download_documents(chats)
     if args.download_media == "all":
-        await download_all_media()
+        await download_all_media(chats)
 
 #     if args.clone:
 #         chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list
