@@ -4,7 +4,7 @@ import configparser
 import os 
 
 parser = configparser.ConfigParser() 
-fullpath = os.path.expanduser("~/.config/dark-send.conf") 
+fullpath = os.path.expanduser("~/.config/dark-send/dark-send.conf") 
 
 def generate_conf():
     
@@ -24,6 +24,8 @@ def generate_conf():
                 'api_hash': api_hash, 
                 'string_session': string_session
                 } 
+
+        os.makedirs(os.path.dirname(fullpath), exist_ok=True) 
 
         with open(fullpath, 'w') as f: 
             parser.write(f) 
