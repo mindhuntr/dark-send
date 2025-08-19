@@ -12,6 +12,7 @@ from inquirer import display_list
 from datetime import datetime
 from telethon.tl import types
 from os import path
+import json 
 import mimetypes
 import progress_bar
 import config
@@ -29,35 +30,54 @@ async def main():
     parser.add_argument('-i', '--image', type=str, nargs="+", help="images to send")
     parser.add_argument('-f', '--file', type=str, nargs="+", help="files to send")
     parser.add_argument('-p', '--compressed', type=str, nargs="+", help="send files as compressed (images and videos)")
-    parser.add_argument('-n', '--nchats', type=int, nargs="?", default=40, help="no chats to display")
+    parser.add_argument('-n', '--nchats', type=int, nargs="?", default=100, help="no chats to display")
     parser.add_argument('-c', '--chats', type=str, nargs="*", help="name of the chat")
     parser.add_argument('-t', '--caption', type=str, nargs="*", help="caption for file")
     parser.add_argument('-a', '--album', action="store_true", help="send files as albums")
     parser.add_argument('-q', '--quiet', action="store_true", help="suppress progress bar")
+    parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
     parser.add_argument('--download-media', choices=['image', 'video', 'file', 'audio', 'all'] , help="download all media from chats")
 
     chats = []
     chat_list = {}
     mimetypes.init()
+    chat_path = path.join(path.dirname(config.fullpath), "chats.json")
     args = parser.parse_args()
 
     if len(sys.argv) == 1:
         parser.print_help()
         exit()
 
-    async for dialog in client.iter_dialogs(args.nchats):
-        if not hasattr(dialog.entity, "forum"):
-            chat_list[dialog.name] = dialog.id
-        else:
-            if dialog.entity.forum:
-                topic_obj = await client(GetForumTopicsRequest(
-                    channel=dialog.id, offset_date=datetime.now(),
-                    offset_id=1, offset_topic=1, limit=100))
-
-                topics = [{topic.title: topic.id} for topic in topic_obj.topics]
-                chat_list[dialog.name] = [dialog.id, topics]
-            else:
+    async def get_chats():
+        nonlocal chat_list
+        async for dialog in client.iter_dialogs(args.nchats):
+            if not hasattr(dialog.entity, "forum"):
                 chat_list[dialog.name] = dialog.id
+            else:
+                if dialog.entity.forum:
+                    topic_obj = await client(GetForumTopicsRequest(
+                        channel=dialog.id, offset_date=datetime.now(),
+                        offset_id=1, offset_topic=1, limit=100))
+
+                    topics = [{topic.title: topic.id} for topic in topic_obj.topics]
+                    chat_list[dialog.name] = [dialog.id, topics]
+                else:
+                    chat_list[dialog.name] = dialog.id
+
+    async def reload_chats(): 
+        await get_chats() 
+        with open(chat_path, 'w') as chat_file: 
+            json.dump(chat_list, chat_file) 
+
+    async def load_chats(): 
+        nonlocal chat_list
+        with open(chat_path, 'r') as chat_file: 
+            chat_list = json.load(chat_file) 
+
+    if path.exists(chat_path) and not args.refresh: 
+        await load_chats() 
+    else: 
+        await reload_chats() 
 
     if not args.caption:
         args.caption = [None]
