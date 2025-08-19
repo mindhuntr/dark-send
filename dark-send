@@ -11,38 +11,80 @@ from argparse import ArgumentParser
 from inquirer import display_list
 from datetime import datetime
 from telethon.tl import types
-from os import path
-import json 
-import mimetypes
+from os import path, remove
+import socket
 import progress_bar
+import mimetypes
+import asyncio 
 import config
+import json 
 import sys
 
 """ Get api id and hash from https://my.telegram.org """
 
+SOCK_PATH = "/tmp/dark-send.sock" 
 
-async def main():
 
-    parser = ArgumentParser(description='command line telegram client')
+async def daemonize(): 
 
-    parser.add_argument('message', type=str, help="the message you would like to send", nargs="*")
-    parser.add_argument('-v', '--video', type=str, nargs="+", help="videos to send")
-    parser.add_argument('-i', '--image', type=str, nargs="+", help="images to send")
-    parser.add_argument('-f', '--file', type=str, nargs="+", help="files to send")
-    parser.add_argument('-p', '--compressed', type=str, nargs="+", help="send files as compressed (images and videos)")
-    parser.add_argument('-n', '--nchats', type=int, nargs="?", default=100, help="no chats to display")
-    parser.add_argument('-c', '--chats', type=str, nargs="*", help="name of the chat")
-    parser.add_argument('-t', '--caption', type=str, nargs="*", help="caption for file")
-    parser.add_argument('-a', '--album', action="store_true", help="send files as albums")
-    parser.add_argument('-q', '--quiet', action="store_true", help="suppress progress bar")
-    parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
-    parser.add_argument('--download-media', choices=['image', 'video', 'file', 'audio', 'all'] , help="download all media from chats")
+    if path.exists(config.fullpath):
+        config.parser.read(config.fullpath)
+        api_id = int(config.parser.get('dark-send', 'api_id'))
+        api_hash = config.parser.get('dark-send', 'api_hash')
+        string = config.parser.get('dark-send', 'string_session')
+
+    else:
+        config.generate_conf()
+        config.parser.read(config.fullpath)
+        api_id = int(config.parser.get('dark-send', 'api_id'))
+        api_hash = config.parser.get('dark-send', 'api_hash')
+        string = config.parser.get('dark-send', 'string_session')
+
+    client = TelegramClient(StringSession(string), api_id, api_hash)
+    await client.start()
+
+    # clean up old socket
+    if path.exists(SOCK_PATH):
+        remove(SOCK_PATH)
+
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(SOCK_PATH)
+    server.listen(5)
+
+    print(f"dark-send daemon listening on {SOCK_PATH}")
+
+    while True:
+        conn, _ = server.accept()
+        data = conn.recv(4096).decode()
+        print(f"Received: {data}")
+        try:
+            cmd = json.loads(data)
+            if cmd["type"] == "send_message":
+                await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
+                conn.send(b"ok")
+
+            elif cmd["type"] == "send_image": 
+                await client.send_file(
+                    cmd["chat"], cmd["image"],
+                    image=True, progress_callback=progress_bar.progress,
+                    part_size_kb=512, caption=cmd["caption"],
+                    reply_to=cmd["reply_to"]
+                                )
+
+            else:
+                conn.send(b"unknown command")
+        except Exception as e:
+            conn.send(str(e).encode())
+        finally:
+            conn.close()
+
+
+async def cli(args):
 
     chats = []
     chat_list = {}
     mimetypes.init()
     chat_path = path.join(path.dirname(config.fullpath), "chats.json")
-    args = parser.parse_args()
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -85,12 +127,19 @@ async def main():
     if not chats:
         chats = await display_list(args.nchats, args.chats, chat_list)  # Display chat list
 
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(SOCK_PATH)
+
     # Send Message
     async def send_message(chats, messages):
         for message in messages:
             for chat in chats:
-                await client.send_message(chat[0],
-                                          message, reply_to=chat[1])
+                cmd = {"type": "send_message", "chat": chat[0], "text": message, "reply_to": chat[1]}
+                sock.send(json.dumps(cmd).encode())
+                resp = sock.recv(4096).decode()
+
+                # await client.send_message(chat[0],
+                #                           message, reply_to=chat[1])
 
     # Send Videos
     async def send_videos(chats, videos):
@@ -178,12 +227,15 @@ async def main():
                     for chat in chats:
                         if not args.quiet:
                             # image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
-                            await client.send_file(
-                                chat[0], image,
-                                image=True, progress_callback=progress_bar.progress,
-                                part_size_kb=512, caption=args.caption[0],
-                                reply_to=chat[1]
-                            )
+                            cmd = {"type": "send_image", "chat": chat[0], "image": path.abspath(image), "caption": args.caption[0], "reply_to": chat[1],}
+                            sock.send(json.dumps(cmd).encode())
+
+                            # await client.send_file(
+                            #     chat[0], image,
+                            #     image=True, progress_callback=progress_bar.progress,
+                            #     part_size_kb=512, caption=args.caption[0],
+                            #     reply_to=chat[1]
+                            # )
                         else:
                             # image_handle = await client.upload_file(image,part_size_kb=512)
                             await client.send_file(
@@ -196,12 +248,17 @@ async def main():
         else:                                                           # Send images as an album 
             for chat in chats:
                 if not args.quiet:
-                    await client.send_file(
-                        chat[0], images,
-                        progress_callback=progress_bar.progress, part_size_kb=512,
-                        image=True, caption=args.caption,
-                        reply_to=chat[1]
-                    )
+                    image_paths = [ path.abspath(image) for image in images ]
+                    print(image_paths)
+                    cmd = {"type": "send_image", "chat": chat[0], "image": image_paths, "caption": args.caption[0], "reply_to": chat[1],}
+                    sock.send(json.dumps(cmd).encode())
+
+                    # await client.send_file(
+                    #     chat[0], images,
+                    #     progress_callback=progress_bar.progress, part_size_kb=512,
+                    #     image=True, caption=args.caption,
+                    #     reply_to=chat[1]
+                    # )
                 else:
                     await client.send_file(
                         chat[0], images,
@@ -352,20 +409,35 @@ async def main():
 #                     if type(message.media) is MessageMediaDocument:
 #                         album.append(message)
 
-if __name__ == "__main__":
 
-    if path.exists(config.fullpath):
-        config.parser.read(config.fullpath)
-        api_id = int(config.parser.get('dark-send', 'api_id'))
-        api_hash = config.parser.get('dark-send', 'api_hash')
-        string = config.parser.get('dark-send', 'string_session')
 
+async def main():
+
+    parser = ArgumentParser(description='command line telegram client')
+    parser.add_argument('message', type=str, help="the message you would like to send", nargs="*")
+    parser.add_argument("--daemon", action="store_true", help="Run in daemon mode")
+    parser.add_argument('-v', '--video', type=str, nargs="+", help="videos to send")
+    parser.add_argument('-i', '--image', type=str, nargs="+", help="images to send")
+    parser.add_argument('-f', '--file', type=str, nargs="+", help="files to send")
+    parser.add_argument('-p', '--compressed', type=str, nargs="+", help="send files as compressed (images and videos)")
+    parser.add_argument('-n', '--nchats', type=int, nargs="?", default=100, help="no chats to display")
+    parser.add_argument('-c', '--chats', type=str, nargs="*", help="name of the chat")
+    parser.add_argument('-t', '--caption', type=str, nargs="*", help="caption for file")
+    parser.add_argument('-a', '--album', action="store_true", help="send files as albums")
+    parser.add_argument('-q', '--quiet', action="store_true", help="suppress progress bar")
+    parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
+    parser.add_argument('--download-media', choices=['image', 'video', 'file', 'audio', 'all'] , help="download all media from chats")
+
+    args = parser.parse_args()
+
+    if args.daemon:
+        await daemonize()
     else:
-        config.generate_conf()
-        config.parser.read(config.fullpath)
-        api_id = int(config.parser.get('dark-send', 'api_id'))
-        api_hash = config.parser.get('dark-send', 'api_hash')
-        string = config.parser.get('dark-send', 'string_session')
+        await cli(args)
 
-    with TelegramClient(StringSession(string), api_id, api_hash) as client:
-        client.loop.run_until_complete(main())
+    # with TelegramClient(StringSession(string), api_id, api_hash) as client:
+    #     client.loop.run_until_complete(main())
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
