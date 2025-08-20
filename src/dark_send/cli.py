@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-
 from argparse import ArgumentParser
-from meta_data import meta_extract
-from inquirer import display_list
+from .meta_data import meta_extract
+from .inquirer import display_list
+from .progress_bar import progress
 from os import path, getcwd
-import progress_bar
 import subprocess
 import mimetypes
 import asyncio 
@@ -24,10 +22,6 @@ async def cli(args):
     chat_list = {}
     mimetypes.init()
     chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        exit()
 
     async def reload_chats(): 
 
@@ -66,12 +60,10 @@ async def cli(args):
                 msg = json.loads(line)
                 current = msg["current"]
                 total = msg["total"]
-                progress_bar.progress(current, total) 
+                progress(current, total) 
 
             if current == total:
                 break
-
-
 
     if path.exists(chat_path) and not args.refresh: 
         await load_chats() 
@@ -244,7 +236,7 @@ async def main():
 
     parser = ArgumentParser(description='command line telegram client')
     parser.add_argument('message', type=str, help="the message you would like to send", nargs="*")
-    parser.add_argument("--daemon", action="store_true", help="Run in daemon mode")
+    parser.add_argument("--daemonize", action="store_true", help="Run in daemon mode")
     parser.add_argument('-v', '--video', type=str, nargs="+", help="videos to send")
     parser.add_argument('-i', '--image', type=str, nargs="+", help="images to send")
     parser.add_argument('-f', '--file', type=str, nargs="+", help="files to send")
@@ -257,10 +249,15 @@ async def main():
 
     args = parser.parse_args()
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        exit()
+
+
     def run_daemon(): 
         asyncio.run(core.daemonize())
 
-    if args.daemon:
+    if args.daemonize:
         subprocess.Popen(
             [sys.executable, "-c", "import asyncio, core; asyncio.run(core.daemonize())"],
             stdout=subprocess.DEVNULL,
@@ -271,11 +268,14 @@ async def main():
         print("Daemon started in background")
         sys.exit(0)
     else:
-        await cli(args)
+        try:
+            await cli(args)
+        except (ConnectionRefusedError, FileNotFoundError) as e: 
+            print(f"Caught error {e}") 
+            print("Daemonize the process using --daemonize to initialize socket") 
 
-    # with TelegramClient(StringSession(string), api_id, api_hash) as client:
-    #     client.loop.run_until_complete(main())
-
+def entrypoint():
+    asyncio.run(main())
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    entrypoint() 
