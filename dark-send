@@ -53,31 +53,93 @@ async def daemonize():
 
     print(f"dark-send daemon listening on {SOCK_PATH}")
 
+    def upload_progress(current, total):
+        update = json.dumps({"type": "progress", "current": current, "total": total})
+        conn.send(update.encode())
+
+    sock_buf = ""
+
     while True:
         conn, _ = server.accept()
-        data = conn.recv(4096).decode()
-        print(f"Received: {data}")
+        cmd_arr = []
+
+        while True:
+            sock_buf += conn.recv(4096).decode() 
+
+            while "\n" in sock_buf: 
+                line, sock_buf = sock_buf.split("\n", 1)
+                if not line.strip(): 
+                    continue 
+                cmd = json.loads(line) 
+                print(cmd)
+
+                if cmd["type"] == "end": 
+                    break 
+
+                cmd_arr.append(cmd) 
+
+            if cmd_arr and cmd["type"] == "end":
+                break
+
         try:
-            cmd = json.loads(data)
-            if cmd["type"] == "send_message":
-                await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
-                conn.send(b"ok")
+            for cmd in cmd_arr:
+                if cmd["type"] == "send_message":
+                    await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
 
-            elif cmd["type"] == "send_image": 
-                await client.send_file(
-                    cmd["chat"], cmd["image"],
-                    image=True, progress_callback=progress_bar.progress,
-                    part_size_kb=512, caption=cmd["caption"],
-                    reply_to=cmd["reply_to"]
-                                )
+                elif cmd["type"] == "send_image": 
+                    if cmd["quiet"] == False: 
+                        await client.send_file(
+                            cmd["chat"], cmd["image"],
+                            image=True,
+                            part_size_kb=512, caption=cmd["caption"],
+                            reply_to=cmd["reply_to"],
+                            progress_callback=upload_progress
+                                        )
+                    else: 
+                        await client.send_file(
+                            cmd["chat"], cmd["image"],
+                            image=True,
+                            part_size_kb=512, caption=cmd["caption"],
+                            reply_to=cmd["reply_to"],
+                                        )
 
-            else:
-                conn.send(b"unknown command")
+                elif cmd["type"] == "send_video":
+                    if cmd["quiet"] == False:
+                        video_handle = await client.upload_file(
+                            cmd["video"],
+                            progress_callback=upload_progress,
+                            part_size_kb=512)
+                    else: 
+                        video_handle = await client.upload_file(
+                            cmd["video"],
+                            part_size_kb=512)
+
+                    await client.send_file(
+                        cmd["chat"], video_handle,
+                        video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
+                        reply_to=cmd["reply_to"], caption=cmd["caption"]
+                        )
+
+                elif cmd["type"] == "send_file": 
+                    if cmd["quiet"] == "False":
+                        await client.send_file(
+                            cmd["chat"], cmd["file"],caption=cmd["caption"], 
+                            reply_to=cmd["reply_to"], progress_callback=upload_progress, force_document=True
+                        )
+                    else: 
+                        await client.send_file(
+                            cmd["chat"], cmd["file"],caption=cmd["caption"], 
+                            reply_to=cmd["reply_to"], force_document=True
+                        )
+
+                else:
+                    conn.send(b"unknown command")
+
         except Exception as e:
             conn.send(str(e).encode())
         finally:
-            conn.close()
-
+            sock_buf = ""
+            conn.close() 
 
 async def cli(args):
 
@@ -116,6 +178,19 @@ async def cli(args):
         with open(chat_path, 'r') as chat_file: 
             chat_list = json.load(chat_file) 
 
+    def display_progress(): 
+        while True:
+            data = sock.recv(4096).decode()
+            for line in data.splitlines():
+                msg = json.loads(line)
+                current = msg["current"]
+                total = msg["total"]
+                progress_bar.progress(current, total) 
+
+            if current == total:
+                break
+
+
     if path.exists(chat_path) and not args.refresh: 
         await load_chats() 
     else: 
@@ -130,16 +205,18 @@ async def cli(args):
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(SOCK_PATH)
 
+
     # Send Message
     async def send_message(chats, messages):
         for message in messages:
             for chat in chats:
                 cmd = {"type": "send_message", "chat": chat[0], "text": message, "reply_to": chat[1]}
-                sock.send(json.dumps(cmd).encode())
-                resp = sock.recv(4096).decode()
-
+                sock.send((json.dumps(cmd) + "\n").encode())
                 # await client.send_message(chat[0],
                 #                           message, reply_to=chat[1])
+
+        cmd = {"type": "end"} 
+        sock.send((json.dumps(cmd) + "\n").encode())
 
     # Send Videos
     async def send_videos(chats, videos):
@@ -147,77 +224,26 @@ async def cli(args):
             if path.exists(video):
                 height, width, duration = meta_extract(video)
                 for chat in chats:
-                    if not args.quiet:
-                        video_handle = await client.upload_file(
-                            video,
-                            progress_callback=progress_bar.progress,
-                            part_size_kb=512)
+                    cmd = {
+                        "type": "send_video", "chat": chat[0], 
+                        "video": path.abspath(video), "caption": args.caption[0], 
+                        "reply_to": chat[1],
+                        "height": height, "width": width, "duration": duration,
+                        "quiet": args.quiet 
+                    }
 
-                        await client.send_file(
-                            chat[0], video_handle,
-                            video=True, attributes=(DocumentAttributeVideo(duration, width, height, supports_streaming=True),),
-                            reply_to=chat[1], caption=args.caption[0]
-                            )
-                    else:
-                        video_handle = await client.upload_file(
-                            video,
-                            part_size_kb=512
-                        )
-                        await client.send_file(
-                            chat[0], video_handle,
-                            video=True, attributes=(DocumentAttributeVideo(duration, width, height, supports_streaming=True),),
-                            caption=args.caption[0], reply_to=chat[1]
-                            )
+                    sock.send((json.dumps(cmd) + "\n").encode())
             else:
                 print("{} doesnt exist".format(video))
 
-    # Send both videos and images as compressed
-    async def send_compressed(chats, compressed):
-        for file in compressed:
-            if path.exists(file):
-                mime_out = mimetypes.guess_type(file)[0]
-                if mime_out and mime_out.split('/')[0] == "image":  # Check if image
+        cmd = {"type": "end"} 
+        sock.send((json.dumps(cmd) + "\n").encode())
 
-                    for chat in chats:
-                        if not args.quiet:
-                            image_handle = await client.upload_file(
-                                file,
-                                progress_callback=progress_bar.progress,
-                                part_size_kb=512
-                            )
-                        else:
-                            image_handle = await client.upload_file(
-                                file,
-                                part_size_kb=512
-                            )
+        if not args.quiet: 
+            count = len(videos) * len(chats) 
+            for i in range(0, count): 
+                display_progress()
 
-                        await client.send_file(
-                            chat[0], image_handle,
-                            image=True, reply_to=chat[1]
-                        )
-
-                if mime_out and mime_out.split('/')[0] == "video":  # Check if video
-                    height, width, duration = meta_extract(file)
-                    for chat in chats:
-                        if not args.quiet:
-                            video_handle = await client.upload_file(
-                                file,
-                                progress_callback=progress_bar.progress,
-                                part_size_kb=512
-                            )
-                        else:
-                            video_handle = await client.upload_file(
-                                file,
-                                part_size_kb=512
-                            )
-                        await client.send_file(
-                            chat[0], video_handle,
-                            video=True, attributes=(DocumentAttributeVideo(duration, width, height, supports_streaming=True),),
-                            reply_to=chat[1]
-                        )
-
-            else:
-                print("{} doesnt exist".format(file))
 
     # Send Images
     async def send_images(chats, images):
@@ -225,71 +251,51 @@ async def cli(args):
             for image in images:
                 if path.exists(image):
                     for chat in chats:
-                        if not args.quiet:
-                            # image_handle = await client.upload_file(image,progress_callback=progress_bar.progress,part_size_kb=512)
-                            cmd = {"type": "send_image", "chat": chat[0], "image": path.abspath(image), "caption": args.caption[0], "reply_to": chat[1],}
-                            sock.send(json.dumps(cmd).encode())
+                        cmd = {
+                            "type": "send_image", "chat": chat[0], 
+                            "image": path.abspath(image), "caption": args.caption[0], 
+                            "reply_to": chat[1], "quiet": args.quiet 
+                        }
 
-                            # await client.send_file(
-                            #     chat[0], image,
-                            #     image=True, progress_callback=progress_bar.progress,
-                            #     part_size_kb=512, caption=args.caption[0],
-                            #     reply_to=chat[1]
-                            # )
-                        else:
-                            # image_handle = await client.upload_file(image,part_size_kb=512)
-                            await client.send_file(
-                                chat[0], image,
-                                image=True, part_size_kb=512,
-                                caption=args.caption[0], replay_to=chat[1]
-                            )
+                        sock.send((json.dumps(cmd) + "\n").encode())
                 else:
                     print("{} doesnt exist".format(image))
+
         else:                                                           # Send images as an album 
             for chat in chats:
-                if not args.quiet:
-                    image_paths = [ path.abspath(image) for image in images ]
-                    print(image_paths)
-                    cmd = {"type": "send_image", "chat": chat[0], "image": image_paths, "caption": args.caption[0], "reply_to": chat[1],}
-                    sock.send(json.dumps(cmd).encode())
+                image_paths = [ path.abspath(image) for image in images ]
+                cmd = {
+                    "type": "send_image", "chat": chat[0], 
+                    "image": image_paths, "caption": args.caption[0], 
+                    "reply_to": chat[1], "quiet": args.quiet
+                }
+                sock.send((json.dumps(cmd) + "\n").encode())
 
-                    # await client.send_file(
-                    #     chat[0], images,
-                    #     progress_callback=progress_bar.progress, part_size_kb=512,
-                    #     image=True, caption=args.caption,
-                    #     reply_to=chat[1]
-                    # )
-                else:
-                    await client.send_file(
-                        chat[0], images,
-                        part_size_kb=512, image=True,
-                        caption=args.caption, reply_to=chat[1]
-                    )
+
+        cmd = {"type": "end"} 
+        sock.send((json.dumps(cmd) + "\n").encode())
+
+        if not args.quiet: 
+            if not args.album:
+                count = len(images) * len(chats) 
+            else:
+                count = len(chats) 
+            for i in range(0, count): 
+                display_progress() 
+
 
     # Send files
     async def send_files(chats, files):
         if not args.album:
             for file in files:
                 if path.exists(file):
-                    with open(file, 'rb') as f_obj:
-                        if not args.quiet:
-                            res = await upload_file(
-                                client, f_obj,
-                                progress_callback=progress_bar.progress
-                            )
-                        else:
-                            res = await upload_file(client, f_obj)
-                        attributes, mime_type = utils.get_attributes(file)
-                        media = types.InputMediaUploadedDocument(
-                            file=res, mime_type=mime_type,
-                            attributes=attributes, force_file=True
-                        )
-
                     for chat in chats:
-                        await client.send_file(
-                            chat[0], media,
-                            caption=args.caption[0], reply_to=chat[1]
-                        )
+                        cmd = {
+                            "type": "send_file", "chat": chat[0], 
+                            "file": path.abspath(file), "caption": args.caption[0], 
+                            "reply_to": chat[1], "quiet": args.quiet
+                        }
+                        sock.send((json.dumps(cmd) + "\n").encode())
                 else:
                     print("{} doesnt exist".format(file))
 
@@ -297,30 +303,29 @@ async def cli(args):
             files_album = []
             for file in files:
                 if path.exists(file):
-                    with open(file, 'rb') as f_obj:
-                        if not args.quiet:
-                            res = await upload_file(
-                                client, f_obj,
-                                progress_callback=progress_bar.progress
-                            )
-                        else:
-                            res = await upload_file(client, f_obj)
-
-                        attributes, mime_type = utils.get_attributes(file)
-                        media = types.InputMediaUploadedDocument(
-                            file=res, mime_type=mime_type,
-                            attributes=attributes, force_file=True
-                        )
-                    files_album.append(media)
+                    files_album.append(path.abspath(file))
                 else:
                     print("{} doesnt exist".format(file))
 
-                if files_album:
-                    for chat in chats:
-                        await client.send_file(
-                            chat[0], files_album,
-                            caption=args.caption, reply_to=chat[1]
-                        )
+            if files_album:
+                for chat in chats:
+                    cmd = {
+                        "type": "send_file", "chat": chat[0], 
+                        "file": files_album, "caption": args.caption[0], 
+                        "reply_to": chat[1], "quiet": args.quiet
+                    }
+                    sock.send((json.dumps(cmd) + "\n").encode())
+
+        cmd = {"type": "end"} 
+        sock.send((json.dumps(cmd) + "\n").encode())
+
+        if not args.quiet: 
+            if not args.album:
+                count = len(files) * len(chats) 
+            else:
+                count = len(chats) 
+            for i in range(0, count): 
+                display_progress() 
 
     async def download_images(chats):
         for chat in chats:
@@ -334,6 +339,7 @@ async def cli(args):
                         message, file,
                         progress_callback=progress_bar.progress
                     )
+
     async def download_videos(chats):
         for chat in chats:
             async for message in client.iter_messages(chat[0], filter=InputMessagesFilterVideo):
@@ -372,24 +378,24 @@ async def cli(args):
 
     if args.message:
         await send_message(chats, args.message)
-    if args.video:
-        await send_videos(chats, args.video)
-    if args.compressed:
-        await send_compressed(chats, args.compressed)
-    if args.image:
+    elif args.image:
         await send_images(chats, args.image)
-    if args.file:
+    elif args.video:
+        await send_videos(chats, args.video)
+    elif args.file:
         await send_files(chats, args.file)
-    if args.download_media == "image":
+    elif args.download_media == "image":
         await download_images(chats)
-    if args.download_media == "video":
+    elif args.download_media == "video":
         await download_videos(chats)
-    if args.download_media == "audio":
+    elif args.download_media == "audio":
         await download_audio(chats)
-    if args.download_media == "file":
+    elif args.download_media == "file":
         await download_documents(chats)
-    if args.download_media == "all":
+    elif args.download_media == "all":
         await download_all_media(chats)
+
+
 
 #     if args.clone:
 #         chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list
@@ -419,7 +425,6 @@ async def main():
     parser.add_argument('-v', '--video', type=str, nargs="+", help="videos to send")
     parser.add_argument('-i', '--image', type=str, nargs="+", help="images to send")
     parser.add_argument('-f', '--file', type=str, nargs="+", help="files to send")
-    parser.add_argument('-p', '--compressed', type=str, nargs="+", help="send files as compressed (images and videos)")
     parser.add_argument('-n', '--nchats', type=int, nargs="?", default=100, help="no chats to display")
     parser.add_argument('-c', '--chats', type=str, nargs="*", help="name of the chat")
     parser.add_argument('-t', '--caption', type=str, nargs="*", help="caption for file")
