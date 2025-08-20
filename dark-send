@@ -1,175 +1,56 @@
 #!/usr/bin/env python3
 
-from telethon.tl.types import DocumentAttributeVideo, InputMessagesFilterPhotos, InputMessagesFilterMusic
-from telethon.tl.types import InputMessagesFilterVideo, InputMessagesFilterDocument
-from telethon.tl.functions.channels import GetForumTopicsRequest
-from meta_data import meta_extract
-from telethon.sessions import StringSession
-from telethon import TelegramClient, utils
-from FastTelethon import upload_file
 from argparse import ArgumentParser
+from meta_data import meta_extract
 from inquirer import display_list
-from datetime import datetime
-from telethon.tl import types
-from os import path, remove
-import socket
+from os import path, getcwd
 import progress_bar
+import subprocess
 import mimetypes
 import asyncio 
-import config
+import socket
 import json 
 import sys
+
 
 """ Get api id and hash from https://my.telegram.org """
 
 SOCK_PATH = "/tmp/dark-send.sock" 
-
-
-async def daemonize(): 
-
-    if path.exists(config.fullpath):
-        config.parser.read(config.fullpath)
-        api_id = int(config.parser.get('dark-send', 'api_id'))
-        api_hash = config.parser.get('dark-send', 'api_hash')
-        string = config.parser.get('dark-send', 'string_session')
-
-    else:
-        config.generate_conf()
-        config.parser.read(config.fullpath)
-        api_id = int(config.parser.get('dark-send', 'api_id'))
-        api_hash = config.parser.get('dark-send', 'api_hash')
-        string = config.parser.get('dark-send', 'string_session')
-
-    client = TelegramClient(StringSession(string), api_id, api_hash)
-    await client.start()
-
-    # clean up old socket
-    if path.exists(SOCK_PATH):
-        remove(SOCK_PATH)
-
-    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server.bind(SOCK_PATH)
-    server.listen(5)
-
-    print(f"dark-send daemon listening on {SOCK_PATH}")
-
-    def upload_progress(current, total):
-        update = json.dumps({"type": "progress", "current": current, "total": total})
-        conn.send(update.encode())
-
-    sock_buf = ""
-
-    while True:
-        conn, _ = server.accept()
-        cmd_arr = []
-
-        while True:
-            sock_buf += conn.recv(4096).decode() 
-
-            while "\n" in sock_buf: 
-                line, sock_buf = sock_buf.split("\n", 1)
-                if not line.strip(): 
-                    continue 
-                cmd = json.loads(line) 
-                print(cmd)
-
-                if cmd["type"] == "end": 
-                    break 
-
-                cmd_arr.append(cmd) 
-
-            if cmd_arr and cmd["type"] == "end":
-                break
-
-        try:
-            for cmd in cmd_arr:
-                if cmd["type"] == "send_message":
-                    await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
-
-                elif cmd["type"] == "send_image": 
-                    if cmd["quiet"] == False: 
-                        await client.send_file(
-                            cmd["chat"], cmd["image"],
-                            image=True,
-                            part_size_kb=512, caption=cmd["caption"],
-                            reply_to=cmd["reply_to"],
-                            progress_callback=upload_progress
-                                        )
-                    else: 
-                        await client.send_file(
-                            cmd["chat"], cmd["image"],
-                            image=True,
-                            part_size_kb=512, caption=cmd["caption"],
-                            reply_to=cmd["reply_to"],
-                                        )
-
-                elif cmd["type"] == "send_video":
-                    if cmd["quiet"] == False:
-                        video_handle = await client.upload_file(
-                            cmd["video"],
-                            progress_callback=upload_progress,
-                            part_size_kb=512)
-                    else: 
-                        video_handle = await client.upload_file(
-                            cmd["video"],
-                            part_size_kb=512)
-
-                    await client.send_file(
-                        cmd["chat"], video_handle,
-                        video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
-                        reply_to=cmd["reply_to"], caption=cmd["caption"]
-                        )
-
-                elif cmd["type"] == "send_file": 
-                    if cmd["quiet"] == "False":
-                        await client.send_file(
-                            cmd["chat"], cmd["file"],caption=cmd["caption"], 
-                            reply_to=cmd["reply_to"], progress_callback=upload_progress, force_document=True
-                        )
-                    else: 
-                        await client.send_file(
-                            cmd["chat"], cmd["file"],caption=cmd["caption"], 
-                            reply_to=cmd["reply_to"], force_document=True
-                        )
-
-                else:
-                    conn.send(b"unknown command")
-
-        except Exception as e:
-            conn.send(str(e).encode())
-        finally:
-            sock_buf = ""
-            conn.close() 
+CONFIG_DIR = "~/.config/dark-send/"
 
 async def cli(args):
 
     chats = []
     chat_list = {}
     mimetypes.init()
-    chat_path = path.join(path.dirname(config.fullpath), "chats.json")
+    chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
 
     if len(sys.argv) == 1:
         parser.print_help()
         exit()
 
-    async def get_chats():
-        nonlocal chat_list
-        async for dialog in client.iter_dialogs(args.nchats):
-            if not hasattr(dialog.entity, "forum"):
-                chat_list[dialog.name] = dialog.id
-            else:
-                if dialog.entity.forum:
-                    topic_obj = await client(GetForumTopicsRequest(
-                        channel=dialog.id, offset_date=datetime.now(),
-                        offset_id=1, offset_topic=1, limit=100))
-
-                    topics = [{topic.title: topic.id} for topic in topic_obj.topics]
-                    chat_list[dialog.name] = [dialog.id, topics]
-                else:
-                    chat_list[dialog.name] = dialog.id
-
     async def reload_chats(): 
-        await get_chats() 
+
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(SOCK_PATH)
+
+        nonlocal chat_list 
+
+        cmd = {"type": "get_chats"}
+        sock.send((json.dumps(cmd) + "\n").encode())
+
+        cmd = {"type": "end"} 
+        sock.send((json.dumps(cmd) + "\n").encode())
+
+        buf = "" 
+        while True:
+            data = sock.recv(4096).decode()
+            buf += data
+            if "\n" in buf: 
+                break
+
+        chat_list = json.loads(buf) 
+
         with open(chat_path, 'w') as chat_file: 
             json.dump(chat_list, chat_file) 
 
@@ -191,6 +72,7 @@ async def cli(args):
                 break
 
 
+
     if path.exists(chat_path) and not args.refresh: 
         await load_chats() 
     else: 
@@ -205,15 +87,12 @@ async def cli(args):
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(SOCK_PATH)
 
-
     # Send Message
     async def send_message(chats, messages):
         for message in messages:
             for chat in chats:
                 cmd = {"type": "send_message", "chat": chat[0], "text": message, "reply_to": chat[1]}
                 sock.send((json.dumps(cmd) + "\n").encode())
-                # await client.send_message(chat[0],
-                #                           message, reply_to=chat[1])
 
         cmd = {"type": "end"} 
         sock.send((json.dumps(cmd) + "\n").encode())
@@ -235,6 +114,7 @@ async def cli(args):
                     sock.send((json.dumps(cmd) + "\n").encode())
             else:
                 print("{} doesnt exist".format(video))
+                return 1
 
         cmd = {"type": "end"} 
         sock.send((json.dumps(cmd) + "\n").encode())
@@ -260,6 +140,7 @@ async def cli(args):
                         sock.send((json.dumps(cmd) + "\n").encode())
                 else:
                     print("{} doesnt exist".format(image))
+                    return 1
 
         else:                                                           # Send images as an album 
             for chat in chats:
@@ -298,6 +179,7 @@ async def cli(args):
                         sock.send((json.dumps(cmd) + "\n").encode())
                 else:
                     print("{} doesnt exist".format(file))
+                    return 1
 
         else:
             files_album = []
@@ -306,6 +188,7 @@ async def cli(args):
                     files_album.append(path.abspath(file))
                 else:
                     print("{} doesnt exist".format(file))
+                    return 1
 
             if files_album:
                 for chat in chats:
@@ -327,54 +210,6 @@ async def cli(args):
             for i in range(0, count): 
                 display_progress() 
 
-    async def download_images(chats):
-        for chat in chats:
-            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterPhotos):
-                now = datetime.now()
-                current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
-
-                file_name = "image_" + current_time + ".jpg"
-                with open(file_name, 'wb') as file:
-                    await client.download_media(
-                        message, file,
-                        progress_callback=progress_bar.progress
-                    )
-
-    async def download_videos(chats):
-        for chat in chats:
-            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterVideo):
-                now = datetime.now()
-                current_time = now.strftime("%Y_%m_%d_%H_%M_%S")
-
-                file_name = "video" + current_time + ".mp4"
-                with open(file_name, 'wb') as file:
-                    await client.download_media(
-                        message, file,
-                        progress_callback=progress_bar.progress
-                    )
-    async def download_audio(chats): 
-        for chat in chats:
-            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterMusic):
-                with open(message.file.name.replace('/','-'), 'wb') as file:
-                    await client.download_media(
-                        message, file,
-                        progress_callback=progress_bar.progress
-                    )
-
-    async def download_documents(chats): 
-        for chat in chats:
-            async for message in client.iter_messages(chat[0], filter=InputMessagesFilterDocument):
-                with open(message.file.name.replace('/','-'), 'wb') as file:
-                    await client.download_media(
-                        message, file,
-                        progress_callback=progress_bar.progress
-                    )
-
-    async def download_all_media(chats):
-        await download_images(chats)
-        await download_videos(chats)
-        await download_audio(chats)
-        await download_documents(chats)
 
     if args.message:
         await send_message(chats, args.message)
@@ -384,18 +219,6 @@ async def cli(args):
         await send_videos(chats, args.video)
     elif args.file:
         await send_files(chats, args.file)
-    elif args.download_media == "image":
-        await download_images(chats)
-    elif args.download_media == "video":
-        await download_videos(chats)
-    elif args.download_media == "audio":
-        await download_audio(chats)
-    elif args.download_media == "file":
-        await download_documents(chats)
-    elif args.download_media == "all":
-        await download_all_media(chats)
-
-
 
 #     if args.clone:
 #         chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list
@@ -431,12 +254,22 @@ async def main():
     parser.add_argument('-a', '--album', action="store_true", help="send files as albums")
     parser.add_argument('-q', '--quiet', action="store_true", help="suppress progress bar")
     parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
-    parser.add_argument('--download-media', choices=['image', 'video', 'file', 'audio', 'all'] , help="download all media from chats")
 
     args = parser.parse_args()
 
+    def run_daemon(): 
+        asyncio.run(core.daemonize())
+
     if args.daemon:
-        await daemonize()
+        subprocess.Popen(
+            [sys.executable, "-c", "import asyncio, core; asyncio.run(core.daemonize())"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        print("Daemon started in background")
+        sys.exit(0)
     else:
         await cli(args)
 
