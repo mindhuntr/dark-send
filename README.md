@@ -1,22 +1,75 @@
 # dark-send 
 
-A relatively simple command line telegram client written in python 
+Dark-send is a CLI telegram client written in python. It sends messages and files through your personal telegram account using a daemon that maintains a connection in the background, much like the stock telegram desktop app.
 
 ## Dependencies 
+
 ``` shell 
 pip3 install -r requirements.txt 
 ``` 
 
 ## Installation 
+
+Clone the repository to a local directory
 ``` shell
 git clone https://github.com/mindhuntr/dark-send 
-``` 
+```
+
+For system wide installation 
+```shell
+python3 setup.py install
+```
+
+For user specific installation 
+```shell
+python3 setup.py install --user 
+```
+
+
+## Configuration
+
+dark-send requires a daemon process running in the background. The daemon can be initialized using a parameter 
+
+```shell
+dark-send --daemonize
+```
+
+Once the config file is generated, it is more robust to create a systemd-unit file that automatically executes daemon once the system is up 
+
+```
+
+[Unit]
+Description=Daemon for dark-send
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+ExecStart=/usr/bin/python3 -m dark_send.daemon
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create a file called dark-send.service with the above content, replacing "YOUR_USER" with your username and execute the following commands.
+
+```shell
+systemctl daemon-reload 
+systemctl enable dark-send.service
+systemctl start dark-send.service
+```
+
 
 ## Usage 
 
 Display help: 
 ``` shell 
 dark-send --help 
+
 ``` 
 To send a message:
 ``` shell
