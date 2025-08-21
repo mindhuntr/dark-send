@@ -1,5 +1,5 @@
-from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
+from telethon.sync import TelegramClient
 import configparser 
 import os 
 
