@@ -14,7 +14,6 @@ SOCK_PATH = "/tmp/dark-send.sock"
 
 async def daemonize(): 
 
-
     if path.exists(config.fullpath):
         config.parser.read(config.fullpath)
         api_id = int(config.parser.get('dark-send', 'api_id'))
@@ -22,11 +21,8 @@ async def daemonize():
         string = config.parser.get('dark-send', 'string_session')
 
     else:
-        config.generate_conf()
-        config.parser.read(config.fullpath)
-        api_id = int(config.parser.get('dark-send', 'api_id'))
-        api_hash = config.parser.get('dark-send', 'api_hash')
-        string = config.parser.get('dark-send', 'string_session')
+        print(f"Config file at {config.fullpath} does not exist")
+        return 1
 
     client = TelegramClient(StringSession(string), api_id, api_hash)
     await client.start()

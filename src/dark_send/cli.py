@@ -6,6 +6,7 @@ from os import path, getcwd
 import subprocess
 import mimetypes
 import asyncio 
+import config
 import socket
 import json 
 import sys
@@ -233,6 +234,8 @@ async def main():
         parser.print_help()
         exit()
 
+    if not path.exists(path.join(path.expanduser(CONFIG_DIR) + "dark-send.conf")):
+        config.generate_conf()
 
     if args.daemonize:
         subprocess.Popen(

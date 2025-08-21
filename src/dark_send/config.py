@@ -1,12 +1,12 @@
-from telethon.sessions import StringSession
-from telethon.sync import TelegramClient
-import configparser 
-import os 
-
-parser = configparser.ConfigParser() 
-fullpath = os.path.expanduser("~/.config/dark-send/dark-send.conf") 
-
 def generate_conf():
+
+    from telethon.sessions import StringSession
+    from telethon.sync import TelegramClient
+    import configparser 
+    import os 
+
+    parser = configparser.ConfigParser() 
+    fullpath = os.path.expanduser("~/.config/dark-send/dark-send.conf") 
     
     print("Get api id and hash from https://my.telegram.org") 
 
