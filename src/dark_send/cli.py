@@ -2,11 +2,11 @@ from dark_send.meta_data import meta_extract
 from dark_send.inquirer import display_list
 from dark_send.progress_bar import progress
 from argparse import ArgumentParser
+import dark_send.config as config
 from os import path, getcwd
 import subprocess
 import mimetypes
 import asyncio 
-import config
 import socket
 import json 
 import sys
@@ -54,17 +54,24 @@ async def cli(args):
         with open(chat_path, 'r') as chat_file: 
             chat_list = json.load(chat_file) 
 
-    def display_progress(): 
-        while True:
-            data = sock.recv(4096).decode()
-            for line in data.splitlines():
-                msg = json.loads(line)
-                current = msg["current"]
-                total = msg["total"]
-                progress(current, total) 
+    def display_progress(album, files, chats): 
 
-            if current == total:
-                break
+        if not album:
+            count = len(files) * len(chats) 
+        else:
+            count = len(chats) 
+
+        for i in range(0, count):
+            while True:
+                data = sock.recv(4096).decode()
+                for line in data.splitlines():
+                    msg = json.loads(line)
+                    current = msg["current"]
+                    total = msg["total"]
+                    progress(current, total) 
+
+                if current == total:
+                    break
 
     if path.exists(chat_path) and not args.refresh: 
         await load_chats() 
@@ -112,11 +119,8 @@ async def cli(args):
         cmd = {"type": "end"} 
         sock.send((json.dumps(cmd) + "\n").encode())
 
-        if not args.quiet: 
-            count = len(videos) * len(chats) 
-            for i in range(0, count): 
-                display_progress()
-
+        if not args.quiet:
+            display_progress(args.album, videos, chats) 
 
     # Send Images
     async def send_images(chats, images):
@@ -149,14 +153,8 @@ async def cli(args):
         cmd = {"type": "end"} 
         sock.send((json.dumps(cmd) + "\n").encode())
 
-        if not args.quiet: 
-            if not args.album:
-                count = len(images) * len(chats) 
-            else:
-                count = len(chats) 
-            for i in range(0, count): 
-                display_progress() 
-
+        if not args.quiet:
+            display_progress(args.album, images, chats) 
 
     # Send files
     async def send_files(chats, files):
@@ -195,14 +193,8 @@ async def cli(args):
         cmd = {"type": "end"} 
         sock.send((json.dumps(cmd) + "\n").encode())
 
-        if not args.quiet: 
-            if not args.album:
-                count = len(files) * len(chats) 
-            else:
-                count = len(chats) 
-            for i in range(0, count): 
-                display_progress() 
-
+        if not args.quiet:
+            display_progress(args.album, files, chats) 
 
     if args.message:
         await send_message(chats, args.message)
