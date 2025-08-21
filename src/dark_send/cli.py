@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
-from .meta_data import meta_extract
-from .inquirer import display_list
-from .progress_bar import progress
+from dark_send.meta_data import meta_extract
+from dark_send.inquirer import display_list
+from dark_send.progress_bar import progress
 from os import path, getcwd
 import subprocess
 import mimetypes
@@ -254,12 +254,9 @@ async def main():
         exit()
 
 
-    def run_daemon(): 
-        asyncio.run(core.daemonize())
-
     if args.daemonize:
         subprocess.Popen(
-            [sys.executable, "-c", "import asyncio, core; asyncio.run(core.daemonize())"],
+            [sys.executable, "-m", "dark_send.daemon"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,

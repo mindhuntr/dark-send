@@ -7,10 +7,10 @@ async def daemonize():
     from telethon.tl.functions.channels import GetForumTopicsRequest
     from telethon.sessions import StringSession
     from telethon import TelegramClient, utils
-    from os import path, remove
+    import dark_send.config as config
     from datetime import datetime
+    from os import path, remove
     import mimetypes
-    import config
     import socket
     import json 
 
@@ -38,6 +38,8 @@ async def daemonize():
     server.bind(SOCK_PATH)
     server.listen(5)
 
+    print(f"Socket binded at {SOCK_PATH}") 
+
     def upload_progress(current, total):
         update = json.dumps({"type": "progress", "current": current, "total": total})
         conn.send(update.encode())
@@ -60,12 +62,10 @@ async def daemonize():
 
                 if cmd["type"] == "end": 
                     break 
-
                 cmd_arr.append(cmd) 
 
             if cmd_arr and cmd["type"] == "end":
                 break
-
         try:
             for cmd in cmd_arr:
                 if cmd["type"] == "send_message":
