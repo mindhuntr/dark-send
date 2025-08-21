@@ -1,7 +1,7 @@
-from argparse import ArgumentParser
 from dark_send.meta_data import meta_extract
 from dark_send.inquirer import display_list
 from dark_send.progress_bar import progress
+from argparse import ArgumentParser
 from os import path, getcwd
 import subprocess
 import mimetypes
@@ -211,26 +211,6 @@ async def cli(args):
         await send_videos(chats, args.video)
     elif args.file:
         await send_files(chats, args.file)
-
-#     if args.clone:
-#         chats = await display_list(args.nchats,args.chats,chat_list) # Display chat list
-#         dest_chat = await display_list(args.nchats,args.chats,chat_list) # Display chat list
-#         album = []
-#
-#         for chat in chats:
-#             async for message in client.iter_messages(chat,min_id=14171,reverse=True):
-#                 if type(message) is Message
-#                     if type(message.media) is MessageMediaPhoto
-#                         if album:
-#                             await client.forward_messages(dest_chat[0], album, drop_author=True)
-#                             sleep(1)
-#                             album = [
-#                         await client.send_message(dest_chat[0], message)
-#
-#                     if type(message.media) is MessageMediaDocument:
-#                         album.append(message)
-
-
 
 async def main():
 

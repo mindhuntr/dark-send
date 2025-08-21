@@ -1,18 +1,19 @@
+from telethon.tl.types import DocumentAttributeVideo, InputMessagesFilterPhotos, InputMessagesFilterMusic
+from telethon.tl.types import InputMessagesFilterVideo, InputMessagesFilterDocument
+from telethon.tl.functions.channels import GetForumTopicsRequest
+from telethon.sessions import StringSession
+from telethon import TelegramClient, utils
+import dark_send.config as config
+from datetime import datetime
+from os import path, remove
+import mimetypes
+import socket
+import json 
+
 SOCK_PATH = "/tmp/dark-send.sock" 
 
 async def daemonize(): 
 
-    from telethon.tl.types import DocumentAttributeVideo, InputMessagesFilterPhotos, InputMessagesFilterMusic
-    from telethon.tl.types import InputMessagesFilterVideo, InputMessagesFilterDocument
-    from telethon.tl.functions.channels import GetForumTopicsRequest
-    from telethon.sessions import StringSession
-    from telethon import TelegramClient, utils
-    import dark_send.config as config
-    from datetime import datetime
-    from os import path, remove
-    import mimetypes
-    import socket
-    import json 
 
     if path.exists(config.fullpath):
         config.parser.read(config.fullpath)
@@ -58,8 +59,8 @@ async def daemonize():
                 line, sock_buf = sock_buf.split("\n", 1)
                 if not line.strip(): 
                     continue 
-                cmd = json.loads(line) 
 
+                cmd = json.loads(line) 
                 if cmd["type"] == "end": 
                     break 
                 cmd_arr.append(cmd) 

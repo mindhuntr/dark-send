@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=your_user 
+User=YOUR_USER
 ExecStart=/usr/bin/python3 -m dark_send.daemon
 Restart=on-failure
 RestartSec=5
