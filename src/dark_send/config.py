@@ -6,7 +6,7 @@ import os
 parser = configparser.ConfigParser() 
 fullpath = os.path.expanduser("~/.config/dark-send/dark-send.conf") 
 
-def generate_conf():
+async def generate_conf():
     
     print("Get api id and hash from https://my.telegram.org") 
 
@@ -16,7 +16,7 @@ def generate_conf():
 
     if api_id and api_hash:
 
-        with TelegramClient(StringSession(),int(api_id),api_hash) as client: 
+        async with TelegramClient(StringSession(),int(api_id),api_hash) as client: 
             string_session = client.session.save() 
 
         parser['dark-send'] = {

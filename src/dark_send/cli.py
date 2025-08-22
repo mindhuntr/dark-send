@@ -225,7 +225,7 @@ async def main():
 
     if not path.exists(path.join(path.expanduser(CONFIG_DIR) + "dark-send.conf")):
         import dark_send.config as config
-        config.generate_conf()
+        await config.generate_conf()
 
     if args.daemonize:
         subprocess.Popen(
