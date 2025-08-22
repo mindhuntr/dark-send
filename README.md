@@ -34,7 +34,7 @@ dark-send requires a daemon process running in the background. The daemon can be
 dark-send --daemonize
 ```
 
-Once the config file is generated, it is more robust to create a systemd-unit file that automatically executes daemon once the system is up 
+Once the config file is generated, it is more robust to create a systemd-unit file that automatically executes the daemon once the system is up 
 
 ```
 
@@ -55,7 +55,7 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
-Create a file called dark-send.service with the above content, replacing "YOUR_USER" with your username and execute the following commands.
+Create a file called dark-send.service with the above content and place it in "/etc/systemd/system". Replace "YOUR_USER" with your username and execute the following commands
 
 ```shell
 systemctl daemon-reload 
