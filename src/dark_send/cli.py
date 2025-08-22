@@ -2,10 +2,8 @@ from dark_send.meta_data import meta_extract
 from dark_send.inquirer import display_list
 from dark_send.progress_bar import progress
 from argparse import ArgumentParser
-import dark_send.config as config
-from os import path, getcwd
+from os import path
 import subprocess
-import mimetypes
 import asyncio 
 import socket
 import json 
@@ -21,7 +19,6 @@ async def cli(args):
 
     chats = []
     chat_list = {}
-    mimetypes.init()
     chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
 
     async def reload_chats(): 
@@ -227,6 +224,7 @@ async def main():
         exit()
 
     if not path.exists(path.join(path.expanduser(CONFIG_DIR) + "dark-send.conf")):
+        import dark_send.config as config
         config.generate_conf()
 
     if args.daemonize:
