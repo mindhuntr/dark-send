@@ -51,7 +51,7 @@ async def cli(args):
         with open(chat_path, 'r') as chat_file: 
             chat_list = json.load(chat_file) 
 
-    def display_progress(album, files, chats): 
+    def display_progress(album, files, chats, colour): 
 
         if not album:
             count = len(files) * len(chats) 
@@ -65,7 +65,7 @@ async def cli(args):
                     msg = json.loads(line)
                     current = msg["current"]
                     total = msg["total"]
-                    progress(current, total) 
+                    progress(current, total, colour) 
 
                 if current == total:
                     break
@@ -117,7 +117,7 @@ async def cli(args):
         sock.send((json.dumps(cmd) + "\n").encode())
 
         if not args.quiet:
-            display_progress(args.album, videos, chats) 
+            display_progress(args.album, videos, chats, args.progress_colour) 
 
     # Send Images
     async def send_images(chats, images):
@@ -151,7 +151,7 @@ async def cli(args):
         sock.send((json.dumps(cmd) + "\n").encode())
 
         if not args.quiet:
-            display_progress(args.album, images, chats) 
+            display_progress(args.album, images, chats, args.progress_colour) 
 
     # Send files
     async def send_files(chats, files):
@@ -191,7 +191,7 @@ async def cli(args):
         sock.send((json.dumps(cmd) + "\n").encode())
 
         if not args.quiet:
-            display_progress(args.album, files, chats) 
+            display_progress(args.album, files, chats, args.progress_colour) 
 
     if args.message:
         await send_message(chats, args.message)
@@ -206,7 +206,7 @@ async def main():
 
     parser = ArgumentParser(description='command line telegram client')
     parser.add_argument('message', type=str, help="the message you would like to send", nargs="*")
-    parser.add_argument("--daemonize", action="store_true", help="Run in daemon mode")
+    parser.add_argument("--daemonize", action="store_true", help="run in daemon mode")
     parser.add_argument('-v', '--video', type=str, nargs="+", help="videos to send")
     parser.add_argument('-i', '--image', type=str, nargs="+", help="images to send")
     parser.add_argument('-f', '--file', type=str, nargs="+", help="files to send")
@@ -216,6 +216,7 @@ async def main():
     parser.add_argument('-a', '--album', action="store_true", help="send files as albums")
     parser.add_argument('-q', '--quiet', action="store_true", help="suppress progress bar")
     parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
+    parser.add_argument('-p', '--progress-colour', type=str, default="#b4befe", help="progress bar color in hex format (e.g. #RRGGBB)")
 
     args = parser.parse_args()
 
