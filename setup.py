@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="dark-send",
-    version="0.1.0",
+    version="1.0.0",
     description="A CLI telegram tool",
     author="Irfan Jalal",
     author_email="mindhunter@blinkenshell.org",
