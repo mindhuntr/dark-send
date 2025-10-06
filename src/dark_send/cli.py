@@ -74,6 +74,8 @@ async def cli(args):
         await load_chats() 
     else: 
         await reload_chats() 
+        print("Refreshed local chat store")
+        exit()
 
     if not args.caption:
         args.caption = [None]
