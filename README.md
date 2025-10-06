@@ -75,7 +75,8 @@ To send a message:
 ``` shell
 dark-send Hello!
 ``` 
-![Demo](./demos/send.gif)
+
+![Demo](https://raw.githubusercontent.com/mindhuntr/dark-send/refs/heads/master/demos/send.gif)
 
 To send an image: 
 ``` shell 
@@ -86,7 +87,8 @@ To send files as album:
 ``` shell 
 dark-send -a -f /path/to/file /path/to/file 
 ``` 
-![Demo](./demos/send_file.gif)
+
+![Demo](https://raw.githubusercontent.com/mindhuntr/dark-send/refs/heads/master/demos/send_file.gif)
 
 To send a video directly without selecting from the chats list
 ``` shell 
@@ -94,5 +96,5 @@ dark-send -v /path/to/file -c "Alienists"
 ```
 You can also send messages or files to topics within a group 
 
-![Demo](./demos/send_topic.gif)
+![Demo](https://raw.githubusercontent.com/mindhuntr/dark-send/refs/heads/master/demos/send_topic.gif)
 
