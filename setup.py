@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="dark-send",
-    version="1.0.0",
+    version="1.1.0",
     description="A Command Line Interface for Telegram",
     author="Irfan Jalal",
     author_email="mindhunter@blinkenshell.org",
@@ -17,7 +17,6 @@ setup(
     install_requires = [
         "hachoir>=3.3.0",
         "InquirerPy>=0.3.4",
-        "rich>=14.0.0",
         "telethon>=1.37.0",
         "tqdm>=4.60.0",
     ],
