@@ -14,18 +14,25 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    install_requires=[
-        "hachoir",
-        "InquirerPy",
-        "rich",
-        "telethon",
-        "tqdm",
+    install_requires = [
+        "hachoir>=3.3.0",
+        "InquirerPy>=0.3.4",
+        "rich>=14.0.0",
+        "telethon>=1.37.0",
+        "tqdm>=4.60.0",
     ],
     entry_points={
         "console_scripts": [
             "dark-send=dark_send.cli:entrypoint",
         ],
     },
-    python_requires=">=3.1",
+
+    classifiers=[
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    ],
+
+    python_requires=">=3.8",
 )
 

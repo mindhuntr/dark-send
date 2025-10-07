@@ -1,3 +1,4 @@
 build/
+dist/
 src/dark_send.egg-info/*
 __pycache__
