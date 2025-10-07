@@ -17,7 +17,6 @@ setup(
     install_requires = [
         "hachoir>=3.3.0",
         "InquirerPy>=0.3.4",
-        "rich>=14.0.0",
         "telethon>=1.37.0",
         "tqdm>=4.60.0",
     ],

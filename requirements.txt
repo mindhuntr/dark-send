@@ -1,5 +1,4 @@
 hachoir==3.3.0
 InquirerPy==0.3.4
-rich==14.1.0
 telethon==1.40.0
 tqdm==4.67.1

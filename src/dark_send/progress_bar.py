@@ -1,4 +1,3 @@
-from rich.progress import Progress, SpinnerColumn 
 from tqdm import tqdm 
 import time
 
