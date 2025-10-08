@@ -10,6 +10,13 @@ pip3 install -r requirements.txt
 
 ## Installation 
 
+Install directly from PyPi
+```shell 
+pip3 install dark-send 
+```
+
+Or 
+
 Clone the repository to a local directory
 ``` shell
 git clone https://github.com/mindhuntr/dark-send 
