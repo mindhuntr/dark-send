@@ -1,10 +1,7 @@
 from InquirerPy import inquirer
 
 
-async def display_list(no_chats,chats,id_list):
-
-    if not no_chats:
-        no_chats = 15
+async def display_list(chats, id_list):
 
     if chats:
         peers = [] 

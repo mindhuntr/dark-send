@@ -81,7 +81,8 @@ async def cli(args):
         args.caption = [None]
 
     if not chats:
-        chats = await display_list(args.nchats, args.chats, chat_list)  # Display chat list
+        chat_list = dict(list(chat_list.items())[:args.nchats])
+        chats = await display_list(args.chats, chat_list)  # Display chat list
 
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(SOCK_PATH)
