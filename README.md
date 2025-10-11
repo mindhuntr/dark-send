@@ -105,3 +105,6 @@ You can also send messages or files to topics within a group
 
 ![Demo](https://raw.githubusercontent.com/mindhuntr/dark-send/refs/heads/master/demos/send_topic.gif)
 
+## Note 
+
+dark-send doesn't support bot logins for now as the telegram API prevents bots from fetching dialogs they have access to. I will soon be adding a functionality that uses both the user client and the bot client to fetch dialogs and send messages or files through bots.
