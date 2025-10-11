@@ -10,14 +10,18 @@ async def generate_conf():
     
     print("Get api id and hash from https://my.telegram.org") 
 
-    api_id = input("Enter your api id: ") 
-    api_hash = input("Enter your api hash: ") 
+    api_id = input("Enter your api id: ").strip()
+    api_hash = input("Enter your api hash: ").strip()
+    phone = input("Enter your phone number (include country code, e.g. +1415555267): ").strip()
+
     string_session = ''
 
-    if api_id and api_hash:
+    if api_id and api_hash and phone:
 
-        async with TelegramClient(StringSession(),int(api_id),api_hash) as client: 
-            string_session = client.session.save() 
+        client = TelegramClient(StringSession(), api_id, api_hash)
+        await client.start(phone)
+
+        string_session = client.session.save()
 
         parser['dark-send'] = {
                 'api_id': api_id,
