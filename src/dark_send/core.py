@@ -1,6 +1,5 @@
-from telethon.tl.types import DocumentAttributeVideo, InputMessagesFilterPhotos, InputMessagesFilterMusic
-from telethon.tl.types import InputMessagesFilterVideo, InputMessagesFilterDocument
 from telethon.tl.functions.channels import GetForumTopicsRequest
+from telethon.tl.types import DocumentAttributeVideo
 from telethon.sessions import StringSession
 from telethon import TelegramClient, utils
 import dark_send.config as config
@@ -13,7 +12,6 @@ import json
 SOCK_PATH = "/tmp/dark-send.sock" 
 
 async def daemonize(): 
-
 
     if path.exists(config.fullpath):
         config.parser.read(config.fullpath)
