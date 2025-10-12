@@ -14,6 +14,7 @@ SOCK_PATH = "/tmp/dark-send.sock"
 
 async def daemonize(): 
 
+
     if path.exists(config.fullpath):
         config.parser.read(config.fullpath)
         api_id = int(config.parser.get('dark-send', 'api_id'))
@@ -24,8 +25,16 @@ async def daemonize():
         print(f"Config file at {config.fullpath} does not exist")
         return 1
 
-    client = TelegramClient(StringSession(string), api_id, api_hash)
-    await client.start()
+    user_client = TelegramClient(StringSession(string), api_id, api_hash)
+    await user_client.start()
+
+    bot_sessions = {} 
+    bot_sections = [ s for s in config.parser.sections() if s != 'dark-send' ]
+
+    for section in bot_sections: 
+        string_session = config.parser.get(section, 'string_session')
+        bot_sessions[section] = TelegramClient(StringSession(string_session), api_id, api_hash)
+        await bot_sessions[section].start()
 
     # clean up old socket
     if path.exists(SOCK_PATH):
@@ -63,8 +72,18 @@ async def daemonize():
 
             if cmd_arr and cmd["type"] == "end":
                 break
+
         try:
             for cmd in cmd_arr:
+                if cmd["client"] == "user": 
+                    client = user_client 
+                else: 
+                    bot_name = cmd["client"]
+                    if bot_name in bot_sessions:
+                        client = bot_sessions[bot_name] 
+                    else: 
+                        client = user_client 
+
                 if cmd["type"] == "send_message":
                     await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
 
@@ -114,7 +133,7 @@ async def daemonize():
                             reply_to=cmd["reply_to"], force_document=True
                         )
 
-                elif cmd["type"] == "get_chats":
+                elif cmd["type"] == "get_chats" and cmd["client"] == "user":
                     chat_list = {}
                     async for dialog in client.iter_dialogs(100):
                         if not hasattr(dialog.entity, "forum"):
@@ -140,4 +159,3 @@ async def daemonize():
         finally:
             sock_buf = ""
             conn.close() 
-

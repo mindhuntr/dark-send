@@ -92,11 +92,16 @@ async def cli(args):
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(SOCK_PATH)
 
+    if args.bot_name:
+        client = args.bot_name
+    else: 
+        client = "user" 
+
     # Send Message
     async def send_message(chats, messages):
         for message in messages:
             for chat in chats:
-                cmd = {"type": "send_message", "chat": chat[0], "text": message, "reply_to": chat[1]}
+                cmd = {"client": client, "type": "send_message", "chat": chat[0], "text": message, "reply_to": chat[1]}
                 sock.send((json.dumps(cmd) + "\n").encode())
 
         cmd = {"type": "end"} 
@@ -109,6 +114,7 @@ async def cli(args):
                 height, width, duration = meta_extract(video)
                 for chat in chats:
                     cmd = {
+                        "client": client,
                         "type": "send_video", "chat": chat[0], 
                         "video": path.abspath(video), "caption": args.caption[0], 
                         "reply_to": chat[1],
@@ -134,6 +140,7 @@ async def cli(args):
                 if path.exists(image):
                     for chat in chats:
                         cmd = {
+                            "client": client,
                             "type": "send_image", "chat": chat[0], 
                             "image": path.abspath(image), "caption": args.caption[0], 
                             "reply_to": chat[1], "quiet": args.quiet 
@@ -148,6 +155,7 @@ async def cli(args):
             for chat in chats:
                 image_paths = [ path.abspath(image) for image in images ]
                 cmd = {
+                    "client": client,
                     "type": "send_image", "chat": chat[0], 
                     "image": image_paths, "caption": args.caption[0], 
                     "reply_to": chat[1], "quiet": args.quiet
@@ -168,6 +176,7 @@ async def cli(args):
                 if path.exists(file):
                     for chat in chats:
                         cmd = {
+                            "client": client,
                             "type": "send_file", "chat": chat[0], 
                             "file": path.abspath(file), "caption": args.caption[0], 
                             "reply_to": chat[1], "quiet": args.quiet
@@ -189,6 +198,7 @@ async def cli(args):
             if files_album:
                 for chat in chats:
                     cmd = {
+                        "client": client,
                         "type": "send_file", "chat": chat[0], 
                         "file": files_album, "caption": args.caption[0], 
                         "reply_to": chat[1], "quiet": args.quiet
@@ -230,6 +240,7 @@ async def main():
     parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
     parser.add_argument('-p', '--progress-colour', type=str, default="#b4befe", help="progress bar color in hex format (e.g. #RRGGBB)")
     parser.add_argument('--initialize-bot', action="store_true", help="initialize bot account") 
+    parser.add_argument('-b', '--bot-name', type=str, nargs="?", help="use bot account instead of user") 
 
     args = parser.parse_args()
 
