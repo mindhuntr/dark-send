@@ -70,6 +70,15 @@ async def cli(args):
                 if current == total:
                     break
 
+    async def display_dialog():
+        nonlocal chats
+        nonlocal chat_list
+
+        if not chats:
+            chat_list = dict(list(chat_list.items())[:args.nchats])
+            chats = await display_list(args.chats, chat_list)  # Display chat list
+
+
     if path.exists(chat_path) and not args.refresh: 
         await load_chats() 
     else: 
@@ -79,10 +88,6 @@ async def cli(args):
 
     if not args.caption:
         args.caption = [None]
-
-    if not chats:
-        chat_list = dict(list(chat_list.items())[:args.nchats])
-        chats = await display_list(args.chats, chat_list)  # Display chat list
 
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(SOCK_PATH)
@@ -197,12 +202,16 @@ async def cli(args):
             display_progress(args.album, files, chats, args.progress_colour) 
 
     if args.message:
+        await display_dialog()
         await send_message(chats, args.message)
     elif args.image:
+        await display_dialog()
         await send_images(chats, args.image)
     elif args.video:
+        await display_dialog()
         await send_videos(chats, args.video)
     elif args.file:
+        await display_dialog()
         await send_files(chats, args.file)
 
 async def main():
