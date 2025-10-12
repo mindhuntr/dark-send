@@ -220,6 +220,7 @@ async def main():
     parser.add_argument('-q', '--quiet', action="store_true", help="suppress progress bar")
     parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
     parser.add_argument('-p', '--progress-colour', type=str, default="#b4befe", help="progress bar color in hex format (e.g. #RRGGBB)")
+    parser.add_argument('--initialize-bot', action="store_true", help="initialize bot account") 
 
     args = parser.parse_args()
 
@@ -229,7 +230,11 @@ async def main():
 
     if not path.exists(path.join(path.expanduser(CONFIG_DIR) + "dark-send.conf")):
         import dark_send.config as config
-        await config.generate_conf()
+        await config.generate_userconf()
+
+    if args.initialize_bot: 
+        import dark_send.config as config
+        await config.generate_botconf()
 
     if args.daemonize:
         subprocess.Popen(

@@ -3,10 +3,10 @@ from telethon.sync import TelegramClient
 import configparser 
 import os 
 
-parser = configparser.ConfigParser() 
 fullpath = os.path.expanduser("~/.config/dark-send/dark-send.conf") 
+parser = configparser.ConfigParser() 
 
-async def generate_conf():
+async def generate_userconf():
     
     print("Get api id and hash from https://my.telegram.org") 
 
@@ -33,3 +33,34 @@ async def generate_conf():
 
         with open(fullpath, 'w') as f: 
             parser.write(f) 
+
+async def generate_botconf(): 
+
+    parser.read(fullpath) 
+    bot_name = input("Enter bot name: ").strip()
+    bot_token = input("Enter bot token: ").strip()
+
+    api_id = ''
+    api_hash = ''
+    string_session = '' 
+    
+    if parser.has_section('dark-send'): 
+        api_id = parser.get('dark-send', 'api_id') 
+        api_hash = parser.get('dark-send', 'api_hash') 
+    else: 
+        print("Generate user configuration first") 
+        exit(1) 
+
+    if bot_token: 
+        client = TelegramClient(StringSession(), api_id, api_hash)
+        await client.start(bot_token=bot_token)
+        
+        string_session = client.session.save() 
+
+        if not parser.has_section(bot_name): 
+            parser.add_section(bot_name) 
+
+        parser.set(bot_name, 'string_session', string_session) 
+
+    with open(fullpath, 'w') as f: 
+        parser.write(f) 
