@@ -149,6 +149,13 @@ async def daemonize():
 
                     conn.sendall((json.dumps(chat_list) + "\n").encode()) 
 
+                elif cmd["type"] == "get_bots": 
+                    bot_list = {}
+                    for index, section in enumerate(bot_sections, start=1):
+                        bot_list[index] = section 
+
+                    conn.sendall((json.dumps(bot_list) + "\n").encode()) 
+
                 else:
                     conn.send(b"unknown command")
 

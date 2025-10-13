@@ -62,5 +62,7 @@ async def generate_botconf():
 
         parser.set(bot_name, 'string_session', string_session) 
 
-    with open(fullpath, 'w') as f: 
-        parser.write(f) 
+        with open(fullpath, 'w') as f: 
+            parser.write(f) 
+
+        print("Restart daemon to load bot sessions") 

@@ -28,7 +28,7 @@ async def cli(args):
 
         nonlocal chat_list 
 
-        cmd = {"type": "get_chats"}
+        cmd = {"client": "user", "type": "get_chats"}
         sock.send((json.dumps(cmd) + "\n").encode())
 
         cmd = {"type": "end"} 
@@ -211,6 +211,28 @@ async def cli(args):
         if not args.quiet:
             display_progress(args.album, files, chats, args.progress_colour) 
 
+    async def get_bots(): 
+
+        bot_list = {} 
+
+        cmd = {"client": "user", "type": "get_bots"}
+        sock.send((json.dumps(cmd) + "\n").encode())
+
+        cmd = {"type": "end"} 
+        sock.send((json.dumps(cmd) + "\n").encode())
+
+        buf = "" 
+        while True:
+            data = sock.recv(4096).decode()
+            buf += data
+            if "\n" in buf: 
+                break
+
+        bot_list = json.loads(buf) 
+        for bot in bot_list.values(): 
+            print(bot) 
+
+
     if args.message:
         await display_dialog()
         await send_message(chats, args.message)
@@ -223,6 +245,9 @@ async def cli(args):
     elif args.file:
         await display_dialog()
         await send_files(chats, args.file)
+
+    if args.list_bots: 
+        await get_bots()
 
 async def main():
 
@@ -240,6 +265,7 @@ async def main():
     parser.add_argument('-r', '--refresh', action="store_true", help="refresh local chat store")
     parser.add_argument('-p', '--progress-colour', type=str, default="#b4befe", help="progress bar color in hex format (e.g. #RRGGBB)")
     parser.add_argument('--initialize-bot', action="store_true", help="initialize bot account") 
+    parser.add_argument('--list-bots', action="store_true", help="list bot accounts") 
     parser.add_argument('-b', '--bot-name', type=str, nargs="?", help="use bot account instead of user") 
 
     args = parser.parse_args()
