@@ -15,31 +15,43 @@ import sys
 SOCK_PATH = "/tmp/dark-send.sock" 
 CONFIG_DIR = "~/.config/dark-send/"
 
+class DarkSendSocket:
+    def __init__(self, path):
+        self.path = path
+        self.sock = None
+
+    def __enter__(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.path)
+        return self.sock
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.sock.close()
+
 async def cli(args):
 
+    chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
     chats = []
     chat_list = {}
-    chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
 
     async def reload_chats(): 
 
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect(SOCK_PATH)
-
         nonlocal chat_list 
-
-        cmd = {"client": "user", "type": "get_chats"}
-        sock.send((json.dumps(cmd) + "\n").encode())
-
-        cmd = {"type": "end"} 
-        sock.send((json.dumps(cmd) + "\n").encode())
-
         buf = "" 
-        while True:
-            data = sock.recv(4096).decode()
-            buf += data
-            if "\n" in buf: 
-                break
+
+        with DarkSendSocket(SOCK_PATH) as sock:
+
+            cmd = {"client": "user", "type": "get_chats"}
+            sock.send((json.dumps(cmd) + "\n").encode())
+
+            cmd = {"type": "end"} 
+            sock.send((json.dumps(cmd) + "\n").encode())
+
+            while True:
+                data = sock.recv(4096).decode()
+                buf += data
+                if "\n" in buf: 
+                    break
 
         chat_list = json.loads(buf) 
 
@@ -84,26 +96,8 @@ async def cli(args):
         chats = await display_list(args.chats, chat_list)  # Display chat list
 
 
-    if path.exists(chat_path) and not args.refresh: 
-        await load_chats() 
-    else: 
-        await reload_chats() 
-        print("Refreshed local chat store")
-        exit()
-
-    if not args.caption:
-        args.caption = [None]
-
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.connect(SOCK_PATH)
-
-    if args.bot_name:
-        client = args.bot_name
-    else: 
-        client = "user" 
-
     # Send Message
-    async def send_message(chats, messages):
+    async def send_message(sock, chats, messages):
         for message in messages:
             for chat in chats:
                 cmd = {"client": client, "type": "send_message", "chat": chat[0], "text": message, "reply_to": chat[1]}
@@ -113,7 +107,7 @@ async def cli(args):
         sock.send((json.dumps(cmd) + "\n").encode())
 
     # Send Videos
-    async def send_videos(chats, videos):
+    async def send_videos(sock, chats, videos):
         for video in videos:
             if path.exists(video):
                 height, width, duration = meta_extract(video)
@@ -139,7 +133,7 @@ async def cli(args):
             display_progress(args.album, videos, chats, args.progress_colour) 
 
     # Send Images
-    async def send_images(chats, images):
+    async def send_images(sock, chats, images):
         if not args.album:
             for image in images:
                 if path.exists(image):
@@ -175,7 +169,7 @@ async def cli(args):
             display_progress(args.album, images, chats, args.progress_colour) 
 
     # Send files
-    async def send_files(chats, files):
+    async def send_files(sock, chats, files):
         if not args.album:
             for file in files:
                 if path.exists(file):
@@ -216,7 +210,7 @@ async def cli(args):
         if not args.quiet:
             display_progress(args.album, files, chats, args.progress_colour) 
 
-    async def get_bots(): 
+    async def get_bots(sock): 
 
         bot_list = {} 
 
@@ -237,22 +231,44 @@ async def cli(args):
         for bot in bot_list.values(): 
             print(bot) 
 
+    if path.exists(chat_path) and not args.refresh: 
+        await load_chats() 
+    else: 
+        await reload_chats() 
+        print("Refreshed local chat store")
+        exit()
+
+    if not args.caption:
+        args.caption = [None]
+
+    if args.bot_name:
+        client = args.bot_name
+    else: 
+        client = "user" 
 
     if args.message:
         await display_dialog()
-        await send_message(chats, args.message)
+        with DarkSendSocket(SOCK_PATH) as sock:
+            await send_message(sock, chats, args.message)
+
     elif args.image:
         await display_dialog()
-        await send_images(chats, args.image)
+        with DarkSendSocket(SOCK_PATH) as sock:
+            await send_images(sock, chats, args.image)
+
     elif args.video:
         await display_dialog()
-        await send_videos(chats, args.video)
+        with DarkSendSocket(SOCK_PATH) as sock:
+            await send_videos(sock, chats, args.video)
+
     elif args.file:
         await display_dialog()
-        await send_files(chats, args.file)
+        with DarkSendSocket(SOCK_PATH) as sock:
+            await send_files(sock, chats, args.file)
 
     if args.list_bots: 
-        await get_bots()
+        with DarkSendSocket(SOCK_PATH) as sock:
+            await get_bots(sock)
 
 async def main():
 
