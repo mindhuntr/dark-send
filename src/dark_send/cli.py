@@ -74,9 +74,14 @@ async def cli(args):
         nonlocal chats
         nonlocal chat_list
 
-        if not chats:
-            chat_list = dict(list(chat_list.items())[:args.nchats])
-            chats = await display_list(args.chats, chat_list)  # Display chat list
+        if args.chats: 
+            for chat in args.chats: 
+                if not chat in chat_list: 
+                    print(f"Chat \"{chat}\" not found") 
+                    exit(1)
+
+        chat_list = dict(list(chat_list.items())[:args.nchats])
+        chats = await display_list(args.chats, chat_list)  # Display chat list
 
 
     if path.exists(chat_path) and not args.refresh: 
