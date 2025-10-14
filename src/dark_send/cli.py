@@ -231,6 +231,7 @@ async def cli(args):
         for bot in bot_list.values(): 
             print(bot) 
 
+
     if path.exists(chat_path) and not args.refresh: 
         await load_chats() 
     else: 
@@ -238,30 +239,25 @@ async def cli(args):
         print("Refreshed local chat store")
         exit()
 
-    if not args.caption:
-        args.caption = [None]
-
-    if args.bot_name:
-        client = args.bot_name
-    else: 
-        client = "user" 
+    args.caption = args.caption or [None]
+    client = args.bot_name or "user"
 
     if args.message:
         await display_dialog()
         with DarkSendSocket(SOCK_PATH) as sock:
             await send_message(sock, chats, args.message)
 
-    elif args.image:
+    if args.image:
         await display_dialog()
         with DarkSendSocket(SOCK_PATH) as sock:
             await send_images(sock, chats, args.image)
 
-    elif args.video:
+    if args.video:
         await display_dialog()
         with DarkSendSocket(SOCK_PATH) as sock:
             await send_videos(sock, chats, args.video)
 
-    elif args.file:
+    if args.file:
         await display_dialog()
         with DarkSendSocket(SOCK_PATH) as sock:
             await send_files(sock, chats, args.file)
