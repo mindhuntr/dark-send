@@ -2,6 +2,7 @@ from telethon.tl.functions.channels import GetForumTopicsRequest
 from telethon.tl.types import DocumentAttributeVideo
 from telethon.sessions import StringSession
 from telethon import TelegramClient, utils
+from dark_send.cli import DarkSendSocket
 import dark_send.config as config
 from datetime import datetime
 from os import path, remove
@@ -10,6 +11,7 @@ import socket
 import json 
 
 SOCK_PATH = "/tmp/dark-send.sock" 
+HEADER = 4096
 
 async def daemonize(): 
 
@@ -38,41 +40,24 @@ async def daemonize():
     if path.exists(SOCK_PATH):
         remove(SOCK_PATH)
 
-    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server.bind(SOCK_PATH)
-    server.listen(5)
+    server = DarkSendSocket(SOCK_PATH)
+    server.start_server() 
 
     print(f"Socket binded at {SOCK_PATH}") 
 
     def upload_progress(current, total):
-        update = json.dumps({"type": "progress", "current": current, "total": total})
-        conn.send(update.encode())
-
-
-    sock_buf = ""
+        prog_dict = {"type": "progress", "current": current, "total": total}
+        server.relay_to_client(conn, prog_dict) 
 
     while True:
-        conn, _ = server.accept()
-        cmd_arr = []
+        conn, _ = server.sock.accept()
 
-        while True:
-            sock_buf += conn.recv(4096).decode() 
+        message_length = conn.recv(HEADER).decode('utf-8') 
+        message = conn.recv(int(message_length)).decode('utf-8') 
+        cmd_arr = json.loads(message) 
 
-            while "\n" in sock_buf: 
-                line, sock_buf = sock_buf.split("\n", 1)
-                if not line.strip(): 
-                    continue 
-
-                cmd = json.loads(line) 
-                if cmd["type"] == "end": 
-                    break 
-                cmd_arr.append(cmd) 
-
-            if cmd_arr and cmd["type"] == "end":
-                break
-
-        try:
-            for cmd in cmd_arr:
+        for cmd in cmd_arr:
+            try:
                 if cmd["client"] == "user": 
                     client = user_client 
                 else: 
@@ -147,20 +132,16 @@ async def daemonize():
                             else:
                                 chat_list[dialog.name] = dialog.id
 
-                    conn.sendall((json.dumps(chat_list) + "\n").encode()) 
+                    server.relay_to_client(conn, chat_list) 
 
                 elif cmd["type"] == "get_bots": 
                     bot_list = {}
                     for index, section in enumerate(bot_sections, start=1):
                         bot_list[index] = section 
 
-                    conn.sendall((json.dumps(bot_list) + "\n").encode()) 
+                    server.relay_to_client(conn, bot_list) 
 
-                else:
-                    conn.send(b"unknown command")
+            except Exception as e:
+                conn.send(str(e).encode())
+        conn.close()
 
-        except Exception as e:
-            conn.send(str(e).encode())
-        finally:
-            sock_buf = ""
-            conn.close() 

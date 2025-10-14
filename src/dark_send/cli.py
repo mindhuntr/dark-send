@@ -14,6 +14,7 @@ import sys
 
 SOCK_PATH = "/tmp/dark-send.sock" 
 CONFIG_DIR = "~/.config/dark-send/"
+HEADER = 4096
 
 class DarkSendSocket:
     def __init__(self, path):
@@ -23,7 +24,38 @@ class DarkSendSocket:
     def __enter__(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(self.path)
-        return self.sock
+        return self
+
+    def start_server(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.bind(SOCK_PATH)
+        self.sock.listen(5)
+
+    def relay_to_server(self, cmd_dict):
+        message = json.dumps(cmd_dict).encode('utf-8') 
+        message_length = len(message) 
+
+        header_message = str(message_length).encode('utf-8')
+        header_message += b' ' * (HEADER - len(header_message)) 
+
+        self.sock.send(header_message)
+        self.sock.send(message)
+
+    def get_from_server(self): 
+        message_length = self.sock.recv(HEADER).decode('utf-8') 
+        message = self.sock.recv(int(message_length)).decode('utf-8') 
+        return message 
+
+    def relay_to_client(self, conn, cmd_dict):
+
+        message = json.dumps(cmd_dict).encode('utf-8') 
+        message_length = len(message) 
+
+        header_message = str(message_length).encode('utf-8')
+        header_message += b' ' * (HEADER - len(header_message)) 
+
+        conn.send(header_message)
+        conn.send(message)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.sock.close()
@@ -37,23 +69,12 @@ async def cli(args):
     async def reload_chats(): 
 
         nonlocal chat_list 
-        buf = "" 
-
         with DarkSendSocket(SOCK_PATH) as sock:
+            cmd = [{"client": "user", "type": "get_chats"}]
+            sock.relay_to_server(cmd) 
+            response = sock.get_from_server() 
 
-            cmd = {"client": "user", "type": "get_chats"}
-            sock.send((json.dumps(cmd) + "\n").encode())
-
-            cmd = {"type": "end"} 
-            sock.send((json.dumps(cmd) + "\n").encode())
-
-            while True:
-                data = sock.recv(4096).decode()
-                buf += data
-                if "\n" in buf: 
-                    break
-
-        chat_list = json.loads(buf) 
+        chat_list = json.loads(response) 
 
         with open(chat_path, 'w') as chat_file: 
             json.dump(chat_list, chat_file) 
@@ -72,7 +93,8 @@ async def cli(args):
 
         for i in range(0, count):
             while True:
-                data = sock.recv(4096).decode()
+                data = sock.get_from_server() 
+
                 for line in data.splitlines():
                     msg = json.loads(line)
                     current = msg["current"]
@@ -98,16 +120,17 @@ async def cli(args):
 
     # Send Message
     async def send_message(sock, chats, messages):
+        cmd_arr = [] 
         for message in messages:
             for chat in chats:
                 cmd = {"client": client, "type": "send_message", "chat": chat[0], "text": message, "reply_to": chat[1]}
-                sock.send((json.dumps(cmd) + "\n").encode())
-
-        cmd = {"type": "end"} 
-        sock.send((json.dumps(cmd) + "\n").encode())
+                cmd_arr.append(cmd)
+                
+        sock.relay_to_server(cmd_arr) 
 
     # Send Videos
     async def send_videos(sock, chats, videos):
+        cmd_arr = [] 
         for video in videos:
             if path.exists(video):
                 height, width, duration = meta_extract(video)
@@ -120,20 +143,18 @@ async def cli(args):
                         "height": height, "width": width, "duration": duration,
                         "quiet": args.quiet 
                     }
-
-                    sock.send((json.dumps(cmd) + "\n").encode())
+                    cmd_arr.append(cmd)
             else:
                 print("{} doesnt exist".format(video))
                 return 1
 
-        cmd = {"type": "end"} 
-        sock.send((json.dumps(cmd) + "\n").encode())
-
+        sock.relay_to_server(cmd_arr) 
         if not args.quiet:
             display_progress(args.album, videos, chats, args.progress_colour) 
 
     # Send Images
     async def send_images(sock, chats, images):
+        cmd_arr = [] 
         if not args.album:
             for image in images:
                 if path.exists(image):
@@ -145,11 +166,10 @@ async def cli(args):
                             "reply_to": chat[1], "quiet": args.quiet 
                         }
 
-                        sock.send((json.dumps(cmd) + "\n").encode())
+                        cmd_arr.append(cmd)
                 else:
                     print("{} doesnt exist".format(image))
                     return 1
-
         else:                                                           # Send images as an album 
             for chat in chats:
                 image_paths = [ path.abspath(image) for image in images ]
@@ -159,17 +179,15 @@ async def cli(args):
                     "image": image_paths, "caption": args.caption[0], 
                     "reply_to": chat[1], "quiet": args.quiet
                 }
-                sock.send((json.dumps(cmd) + "\n").encode())
+                cmd_arr.append(cmd)
 
-
-        cmd = {"type": "end"} 
-        sock.send((json.dumps(cmd) + "\n").encode())
-
+        sock.relay_to_server(cmd_arr) 
         if not args.quiet:
             display_progress(args.album, images, chats, args.progress_colour) 
 
     # Send files
     async def send_files(sock, chats, files):
+        cmd_arr = []
         if not args.album:
             for file in files:
                 if path.exists(file):
@@ -180,7 +198,7 @@ async def cli(args):
                             "file": path.abspath(file), "caption": args.caption[0], 
                             "reply_to": chat[1], "quiet": args.quiet
                         }
-                        sock.send((json.dumps(cmd) + "\n").encode())
+                        cmd_arr.append(cmd)
                 else:
                     print("{} doesnt exist".format(file))
                     return 1
@@ -202,32 +220,20 @@ async def cli(args):
                         "file": files_album, "caption": args.caption[0], 
                         "reply_to": chat[1], "quiet": args.quiet
                     }
-                    sock.send((json.dumps(cmd) + "\n").encode())
+                    cmd_arr.append(cmd)
 
-        cmd = {"type": "end"} 
-        sock.send((json.dumps(cmd) + "\n").encode())
-
+        sock.relay_to_server(cmd_arr) 
         if not args.quiet:
             display_progress(args.album, files, chats, args.progress_colour) 
 
     async def get_bots(sock): 
 
-        bot_list = {} 
+        cmd = [{"client": "user", "type": "get_bots"}]
+        sock.relay_to_server(cmd) 
+        response = sock.get_from_server() 
 
-        cmd = {"client": "user", "type": "get_bots"}
-        sock.send((json.dumps(cmd) + "\n").encode())
+        bot_list = json.loads(response)
 
-        cmd = {"type": "end"} 
-        sock.send((json.dumps(cmd) + "\n").encode())
-
-        buf = "" 
-        while True:
-            data = sock.recv(4096).decode()
-            buf += data
-            if "\n" in buf: 
-                break
-
-        bot_list = json.loads(buf) 
         for bot in bot_list.values(): 
             print(bot) 
 
