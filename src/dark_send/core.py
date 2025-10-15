@@ -88,21 +88,36 @@ async def daemonize():
                                         )
 
                 elif cmd["type"] == "send_video":
-                    if cmd["quiet"] == False:
-                        video_handle = await client.upload_file(
-                            cmd["video"],
-                            progress_callback=upload_progress,
-                            part_size_kb=512)
-                    else: 
-                        video_handle = await client.upload_file(
-                            cmd["video"],
-                            part_size_kb=512)
+                    if cmd["album"] == "no":
+                        if cmd["quiet"] == False:
+                            video_handle = await client.upload_file(
+                                cmd["video"],
+                                progress_callback=upload_progress,
+                                part_size_kb=512)
+                        else: 
+                            video_handle = await client.upload_file(
+                                cmd["video"],
+                                part_size_kb=512)
 
-                    await client.send_file(
-                        cmd["chat"], video_handle,
-                        video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
-                        reply_to=cmd["reply_to"], caption=cmd["caption"]
-                        )
+                        await client.send_file(
+                            cmd["chat"], video_handle,
+                            video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
+                            reply_to=cmd["reply_to"], caption=cmd["caption"]
+                            )
+                    else:
+                        if cmd["quiet"] == False:
+                            await client.send_file(
+                                cmd["chat"], cmd["video"],
+                                video=True,
+                                reply_to=cmd["reply_to"], caption=cmd["caption"],
+                                progress_callback=upload_progress,
+                                )
+                        else:
+                            await client.send_file(
+                                cmd["chat"], cmd["video"],
+                                video=True,
+                                reply_to=cmd["reply_to"], caption=cmd["caption"],
+                                )
 
                 elif cmd["type"] == "send_file": 
                     if cmd["quiet"] == False:

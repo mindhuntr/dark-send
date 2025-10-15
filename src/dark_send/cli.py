@@ -62,10 +62,6 @@ class DarkSendSocket:
 
 async def cli(args):
 
-    chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
-    chats = []
-    chat_list = {}
-
     async def reload_chats(): 
 
         nonlocal chat_list 
@@ -86,11 +82,7 @@ async def cli(args):
 
     def display_progress(album, files, chats, colour): 
 
-        if not album:
-            count = len(files) * len(chats) 
-        else:
-            count = len(chats) 
-
+        count = len(files) * len(chats) if not album else len(chats)
         for i in range(0, count):
             while True:
                 data = sock.get_from_server() 
@@ -131,22 +123,36 @@ async def cli(args):
     # Send Videos
     async def send_videos(sock, chats, videos):
         cmd_arr = [] 
-        for video in videos:
-            if path.exists(video):
-                height, width, duration = meta_extract(video)
-                for chat in chats:
-                    cmd = {
-                        "client": client,
-                        "type": "send_video", "chat": chat[0], 
-                        "video": path.abspath(video), "caption": args.caption[0], 
-                        "reply_to": chat[1],
-                        "height": height, "width": width, "duration": duration,
-                        "quiet": args.quiet 
-                    }
-                    cmd_arr.append(cmd)
-            else:
-                print("{} doesnt exist".format(video))
-                return 1
+        if not args.album:
+            for video in videos:
+                if path.exists(video):
+                    height, width, duration = meta_extract(video)
+                    for chat in chats:
+                        cmd = {
+                            "client": client,
+                            "type": "send_video", "chat": chat[0], 
+                            "video": path.abspath(video), "caption": args.caption[0], 
+                            "reply_to": chat[1],
+                            "height": height, "width": width, "duration": duration,
+                            "quiet": args.quiet,
+                            "album": "no"
+                        }
+                        cmd_arr.append(cmd)
+                else:
+                    print(f"{video} doesnt exist")
+                    return 1
+        else:
+            for chat in chats:
+                video_paths = [ path.abspath(video) for video in videos ]  # Send videos as album
+                cmd = {
+                    "client": client,
+                    "type": "send_video", "chat": chat[0], 
+                    "video": video_paths, "caption": args.caption[0], 
+                    "reply_to": chat[1],
+                    "quiet": args.quiet,
+                    "album": "yes"
+                }
+                cmd_arr.append(cmd)
 
         sock.relay_to_server(cmd_arr) 
         if not args.quiet:
@@ -170,9 +176,9 @@ async def cli(args):
                 else:
                     print("{} doesnt exist".format(image))
                     return 1
-        else:                                                           # Send images as an album 
+        else:                                                           
             for chat in chats:
-                image_paths = [ path.abspath(image) for image in images ]
+                image_paths = [ path.abspath(image) for image in images ]  # Send images as album
                 cmd = {
                     "client": client,
                     "type": "send_image", "chat": chat[0], 
@@ -237,6 +243,10 @@ async def cli(args):
         for bot in bot_list.values(): 
             print(bot) 
 
+
+    chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
+    chats = []
+    chat_list = {}
 
     if path.exists(chat_path) and not args.refresh: 
         await load_chats() 
