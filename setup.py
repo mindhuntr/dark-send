@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="dark-send",
-    version="1.1.0",
+    version="1.2.0",
     description="A Command Line Interface for Telegram",
     author="Irfan Jalal",
     author_email="mindhunter@blinkenshell.org",

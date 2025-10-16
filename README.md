@@ -107,4 +107,8 @@ You can also send messages or files to topics within a group
 
 ## Note 
 
-dark-send doesn't support bot logins for now as the telegram API prevents bots from fetching dialogs they have access to. I will soon be adding a functionality that uses both the user client and the bot client to fetch dialogs and send messages or files through bots.
+dark-send now supports bot logins from v1.2.0. It leverages the user client to fetch chats and then the bot account to send messages and files. Users can initialize several bot accounts and use them by names they designate. 
+
+```shell 
+dark-send -b FelineBot -f /path/to/file 
+```
