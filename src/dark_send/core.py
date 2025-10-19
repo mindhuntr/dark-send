@@ -1,4 +1,6 @@
 from telethon.tl.functions.channels import GetForumTopicsRequest
+from dark_send import progress_bar
+from dark_send.concurrent_upload import TelegramUploadClient
 from telethon.tl.types import DocumentAttributeVideo
 from telethon.sessions import StringSession
 from telethon import TelegramClient, utils
@@ -25,7 +27,7 @@ async def daemonize():
         print(f"Config file at {config.fullpath} does not exist")
         return 1
 
-    user_client = TelegramClient(StringSession(string), api_id, api_hash)
+    user_client = TelegramUploadClient(StringSession(string), api_id, api_hash)
     await user_client.start()
 
     bot_sessions = {} 
@@ -33,7 +35,7 @@ async def daemonize():
 
     for section in bot_sections: 
         string_session = config.parser.get(section, 'string_session')
-        bot_sessions[section] = TelegramClient(StringSession(string_session), api_id, api_hash)
+        bot_sessions[section] = TelegramUploadClient(StringSession(string_session), api_id, api_hash)
         await bot_sessions[section].start()
 
     # clean up old socket
@@ -97,7 +99,8 @@ async def daemonize():
                         else: 
                             video_handle = await client.upload_file(
                                 cmd["video"],
-                                part_size_kb=512)
+                                part_size_kb=512
+                            )
 
                         await client.send_file(
                             cmd["chat"], video_handle,
@@ -105,31 +108,66 @@ async def daemonize():
                             reply_to=cmd["reply_to"], caption=cmd["caption"]
                             )
                     else:
-                        if cmd["quiet"] == False:
-                            await client.send_file(
-                                cmd["chat"], cmd["video"],
-                                video=True,
-                                reply_to=cmd["reply_to"], caption=cmd["caption"],
-                                progress_callback=upload_progress,
+                        video_arr = []
+                        for video in cmd["video"]:
+                            if cmd["quiet"] == False:
+                                video_handle = await client.upload_file(
+                                    video,
+                                    progress_callback=upload_progress,
+                                    part_size_kb=512)
+                            else: 
+                                video_handle = await client.upload_file(
+                                    video,
+                                    part_size_kb=512
                                 )
-                        else:
-                            await client.send_file(
-                                cmd["chat"], cmd["video"],
-                                video=True,
-                                reply_to=cmd["reply_to"], caption=cmd["caption"],
-                                )
+                            video_arr.append(video_handle) 
+
+                        await client.send_file(
+                            cmd["chat"], video_arr,
+                            video=True,reply_to=cmd["reply_to"], 
+                            caption=cmd["caption"]
+                            )
+
 
                 elif cmd["type"] == "send_file": 
-                    if cmd["quiet"] == False:
-                        await client.send_file(
-                            cmd["chat"], cmd["file"],caption=cmd["caption"], 
-                            reply_to=cmd["reply_to"], progress_callback=upload_progress, force_document=True
-                        )
+                    if cmd["album"] == "no":
+                        if cmd["quiet"] == False:
+                            file_handle = await client.upload_file(
+                                file=cmd["file"],
+                                file_name=cmd["file"], 
+                                progress_callback=upload_progress,
+                            )
+                        else: 
+                            file_handle = await client.upload_file(
+                                file=cmd["file"],
+                                file_name=cmd["file"], 
+                            )
+
+                        await client.send_file( 
+                            cmd["chat"], file_handle, 
+                            force_document=True
+                        ) 
                     else: 
-                        await client.send_file(
-                            cmd["chat"], cmd["file"],caption=cmd["caption"], 
-                            reply_to=cmd["reply_to"], force_document=True
-                        )
+                        file_arr = [] 
+                        for file in cmd["file"]: 
+                            if cmd["quiet"] == False:
+                                file_handle = await client.upload_file(
+                                    file=file,
+                                    file_name=file, 
+                                    progress_callback=upload_progress,
+                                )
+                                file_arr.append(file_handle)
+                            else: 
+                                file_handle = await client.upload_file(
+                                    file=file,
+                                    file_name=file, 
+                                )
+                                file_arr.append(file_handle)
+
+                        await client.send_file( 
+                            cmd["chat"], file_arr, 
+                            force_document=True
+                        ) 
 
                 elif cmd["type"] == "get_chats" and cmd["client"] == "user":
                     chat_list = {}
@@ -157,6 +195,5 @@ async def daemonize():
                     server.relay_to_client(conn, bot_list) 
 
             except Exception as e:
-                conn.send(str(e).encode())
+                print(str(e)) 
         conn.close()
-

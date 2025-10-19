@@ -156,7 +156,7 @@ async def cli(args):
 
         sock.relay_to_server(cmd_arr) 
         if not args.quiet:
-            display_progress(args.album, videos, chats, args.progress_colour) 
+            display_progress(False, videos, chats, args.progress_colour) 
 
     # Send Images
     async def send_images(sock, chats, images):
@@ -202,7 +202,8 @@ async def cli(args):
                             "client": client,
                             "type": "send_file", "chat": chat[0], 
                             "file": path.abspath(file), "caption": args.caption[0], 
-                            "reply_to": chat[1], "quiet": args.quiet
+                            "reply_to": chat[1], "quiet": args.quiet, 
+                            "album": "no"
                         }
                         cmd_arr.append(cmd)
                 else:
@@ -224,13 +225,14 @@ async def cli(args):
                         "client": client,
                         "type": "send_file", "chat": chat[0], 
                         "file": files_album, "caption": args.caption[0], 
-                        "reply_to": chat[1], "quiet": args.quiet
+                        "reply_to": chat[1], "quiet": args.quiet,
+                        "album": "yes"
                     }
                     cmd_arr.append(cmd)
 
         sock.relay_to_server(cmd_arr) 
         if not args.quiet:
-            display_progress(args.album, files, chats, args.progress_colour) 
+            display_progress(False, files, chats, args.progress_colour) 
 
     async def get_bots(sock): 
 
