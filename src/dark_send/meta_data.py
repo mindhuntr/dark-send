@@ -7,25 +7,23 @@ def meta_extract(filename):
 
     if not parser: 
         print("Unable to parse file") 
-        return 1 
+        exit(1)
 
-    try:
-        metadata = extractMetadata(parser) 
-        meta_dict = vars(metadata) 
-
-        if '_MultipleMetadata__key_counter' not in meta_dict: 
-            duration = metadata.get('duration').seconds
-            width = metadata.get('width') 
-            height = metadata.get('height')
-        else:
-            duration = metadata.get('duration').seconds
-            width = meta_dict['_MultipleMetadata__groups']['video[1]'].get('width')
-            height = meta_dict['_MultipleMetadata__groups']['video[1]'].get('height')
+    metadata = extractMetadata(parser) 
+    if not metadata: 
+        print("Metadata not found")
+        exit(1)
         
-        return height, width, duration 
+    meta_dict = vars(metadata) 
 
-    except: 
-
-        print("Unable to extract metadata") 
-        return 1, 1, 1
+    if '_MultipleMetadata__key_counter' not in meta_dict: 
+        duration = metadata.get('duration').seconds
+        width = metadata.get('width') 
+        height = metadata.get('height')
+    else:
+        duration = metadata.get('duration').seconds
+        width = meta_dict['_MultipleMetadata__groups']['video[1]'].get('width')
+        height = meta_dict['_MultipleMetadata__groups']['video[1]'].get('height')
+    
+    return height, width, duration
 

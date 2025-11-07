@@ -1,4 +1,4 @@
-from telethon.tl.functions.channels import GetForumTopicsRequest
+from telethon.tl.functions.messages import GetForumTopicsRequest
 from dark_send.concurrent_upload import TelegramUploadClient
 from telethon.tl.types import DocumentAttributeVideo
 from telethon.sessions import StringSession
@@ -204,7 +204,7 @@ async def daemonize():
                         else:
                             if dialog.entity.forum:
                                 topic_obj = await client(GetForumTopicsRequest(
-                                    channel=dialog.id, offset_date=datetime.now(),
+                                    peer=dialog.id, offset_date=datetime.now(),
                                     offset_id=1, offset_topic=1, limit=100))
 
                                 topics = [{topic.title: topic.id} for topic in topic_obj.topics]
