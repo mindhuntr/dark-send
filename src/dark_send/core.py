@@ -1,15 +1,11 @@
 from telethon.tl.functions.channels import GetForumTopicsRequest
-from dark_send import progress_bar
 from dark_send.concurrent_upload import TelegramUploadClient
 from telethon.tl.types import DocumentAttributeVideo
 from telethon.sessions import StringSession
-from telethon import TelegramClient, utils
 from dark_send.cli import DarkSendSocket
 import dark_send.config as config
 from datetime import datetime
 from os import path, remove
-import mimetypes
-import socket
 import json 
 
 SOCK_PATH = "/tmp/dark-send.sock" 
@@ -73,21 +69,44 @@ async def daemonize():
                     await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
 
                 elif cmd["type"] == "send_image": 
-                    if cmd["quiet"] == False: 
-                        await client.send_file(
-                            cmd["chat"], cmd["image"],
-                            image=True,
-                            part_size_kb=512, caption=cmd["caption"],
-                            reply_to=cmd["reply_to"],
-                            progress_callback=upload_progress
-                                        )
+                    if cmd["album"] == "no":
+                        if cmd["quiet"] == False: 
+                            image_handle = await client.upload_file(
+                                cmd["image"],
+                                progress_callback=upload_progress,
+                                part_size_kb=512)
+                        else: 
+                            image_handle = await client.upload_file(
+                                cmd["image"],
+                                part_size_kb=512)
+
+                        for chat in cmd["chats"]:
+                            await client.send_file( 
+                                chat[0], image_handle,
+                                reply_to=chat[1], caption=cmd["caption"],
+                                ) 
+
                     else: 
-                        await client.send_file(
-                            cmd["chat"], cmd["image"],
-                            image=True,
-                            part_size_kb=512, caption=cmd["caption"],
-                            reply_to=cmd["reply_to"],
-                                        )
+                        img_arr = []
+                        for image in cmd["image"]:
+                            if cmd["quiet"] == False: 
+                                image_handle = await client.upload_file(
+                                    image,
+                                    progress_callback=upload_progress,
+                                    part_size_kb=512)
+                            else: 
+                                image_handle = await client.upload_file(
+                                    image,
+                                    part_size_kb=512)
+
+                            img_arr.append(image_handle)
+
+                        for chat in cmd["chats"]:
+                            await client.send_file(
+                                chat[0], img_arr,
+                                reply_to=chat[1], 
+                                caption=cmd["caption"]
+                            )
 
                 elif cmd["type"] == "send_video":
                     if cmd["album"] == "no":
@@ -102,11 +121,12 @@ async def daemonize():
                                 part_size_kb=512
                             )
 
-                        await client.send_file(
-                            cmd["chat"], video_handle,
-                            video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
-                            reply_to=cmd["reply_to"], caption=cmd["caption"]
-                            )
+                        for chat in cmd["chats"]:
+                            await client.send_file(
+                                chat[0], video_handle,
+                                video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
+                                reply_to=chat[1], caption=cmd["caption"]
+                                )
                     else:
                         video_arr = []
                         for video in cmd["video"]:
@@ -122,10 +142,11 @@ async def daemonize():
                                 )
                             video_arr.append(video_handle) 
 
-                        await client.send_file(
-                            cmd["chat"], video_arr,
-                            video=True,reply_to=cmd["reply_to"], 
-                            caption=cmd["caption"]
+                        for chat in cmd["chats"]:
+                            await client.send_file(
+                                chat[0], video_arr,
+                                video=True,reply_to=chat[1], 
+                                caption=cmd["caption"]
                             )
 
 
@@ -143,10 +164,13 @@ async def daemonize():
                                 file_name=cmd["file"], 
                             )
 
-                        await client.send_file( 
-                            cmd["chat"], file_handle, 
-                            force_document=True
-                        ) 
+                        for chat in cmd["chats"]:
+                            await client.send_file( 
+                                chat[0], file_handle, 
+                                force_document=True,
+                                reply_to=chat[1],
+                                caption=cmd["caption"]
+                            ) 
                     else: 
                         file_arr = [] 
                         for file in cmd["file"]: 
@@ -164,10 +188,13 @@ async def daemonize():
                                 )
                                 file_arr.append(file_handle)
 
-                        await client.send_file( 
-                            cmd["chat"], file_arr, 
-                            force_document=True
-                        ) 
+                        for chat in cmd["chats"]:
+                            await client.send_file( 
+                                chat[0], file_arr, 
+                                force_document=True,
+                                reply_to=chat[1],
+                                caption=cmd["caption"]
+                            ) 
 
                 elif cmd["type"] == "get_chats" and cmd["client"] == "user":
                     chat_list = {}
