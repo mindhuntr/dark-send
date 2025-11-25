@@ -199,6 +199,10 @@ async def daemonize():
                 elif cmd["type"] == "get_chats" and cmd["client"] == "user":
                     chat_list = {}
                     async for dialog in client.iter_dialogs(100):
+                        if hasattr(dialog.entity, "deactivated"): 
+                            if dialog.entity.deactivated: 
+                                continue
+
                         if not hasattr(dialog.entity, "forum"):
                             chat_list[dialog.name] = dialog.id
                         else:
