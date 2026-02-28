@@ -11,5 +11,7 @@
     in
     {
       packages.${system}.default = pkgs.callPackage ./default.nix { };
+      homeManagerModules.default = import ./module.nix;
     };
+
 }
