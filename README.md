@@ -24,14 +24,15 @@ git clone https://github.com/mindhuntr/dark-send
 
 For system wide installation 
 ```shell
-python3 setup.py install
+cd dark-send
+pip3 install .
 ```
 
 For user specific installation 
 ```shell
-python3 setup.py install --user 
+cd dark-send
+pip3 install --user .
 ```
-
 
 ## Configuration
 
