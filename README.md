@@ -15,6 +15,11 @@ Install directly from PyPi
 pip3 install dark-send 
 ```
 
+Install from AUR 
+```shell
+yay -S dark-send
+```
+
 Or 
 
 Clone the repository to a local directory
