@@ -2,6 +2,9 @@ from dark_send.meta_data import meta_extract
 from dark_send.inquirer import display_list
 from dark_send.progress_bar import progress
 from argparse import ArgumentParser
+from rich.console import Console 
+from rich.panel import Panel
+from rich.rule import Rule
 from os import path
 import subprocess
 import asyncio 
@@ -233,6 +236,37 @@ async def cli(args):
             print(bot) 
 
 
+    async def unread_messages(sock): 
+        cmd = [{
+            "client": client, 
+            "chats": chats, 
+            "type": "unread_messages"
+        }] 
+
+        sock.relay_to_server(cmd) 
+        response = sock.get_from_server() 
+
+        messages = json.loads(response)
+
+        console = Console()
+        keys = list(name for _ , dialog in messages.items() for message in dialog for name in message.keys())
+        senders = list(set(keys))
+
+        COLORS = ["cyan", "magenta", "green", "yellow", "blue"]
+        color_map = {name: COLORS[i % len(COLORS)] for i, name in enumerate(senders)}
+
+        if "error" not in messages:
+            for chat, dialog in messages.items(): 
+                if not len(dialog) == 0:  
+                    console.print(f"──── [green]{chat}[/green] ─────")
+                for message in dialog[::-1]: 
+                    (name, text), = message.items()
+                    console.print(
+                      Panel(text, title=name, title_align="left", expand=False, style=color_map[name])
+                    )
+
+                print("")
+
     chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
     chats = []
     chat_list = {}
@@ -271,6 +305,12 @@ async def cli(args):
         with DarkSendSocket(SOCK_PATH) as sock:
             await get_bots(sock)
 
+    if args.unread_messages: 
+        await display_dialog()
+        with DarkSendSocket(SOCK_PATH) as sock:
+            await unread_messages(sock)
+
+
 async def main():
 
     parser = ArgumentParser(description='command line telegram client')
@@ -289,6 +329,7 @@ async def main():
     parser.add_argument('--initialize-bot', action="store_true", help="initialize bot account") 
     parser.add_argument('--list-bots', action="store_true", help="list bot accounts") 
     parser.add_argument('-b', '--bot-name', type=str, nargs="?", help="use bot account instead of user") 
+    parser.add_argument('--unread-messages', action="store_true", help="show unread messages from chat")
 
     args = parser.parse_args()
 
