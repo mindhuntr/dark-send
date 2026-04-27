@@ -1,4 +1,4 @@
-from telethon.tl.functions.messages import GetForumTopicsRequest, GetPeerDialogsRequest
+from telethon.tl.functions.messages import GetForumTopicsRequest, GetPeerDialogsRequest, GetForumTopicsByIDRequest
 from dark_send.concurrent_upload import TelegramUploadClient
 from telethon.tl.types import DocumentAttributeVideo
 from telethon.sessions import StringSession
@@ -230,17 +230,26 @@ async def daemonize():
 
                     for chat in cmd["chats"]:
                         entity = await client.get_entity(chat[0]) 
-                        result = await client(GetPeerDialogsRequest(
-                            peers=[entity]
-                        ))
+
+                        if chat[1]: 
+                            result = await client(GetForumTopicsByIDRequest( 
+                                peer=chat[0], 
+                                topics=[chat[1]],
+                            ))
+                            unread_count = result.topics[0].unread_count
+                        else:
+                            result = await client(GetPeerDialogsRequest(
+                                peers=[entity]
+                            ))
+                            unread_count = result.dialogs[0].unread_count
 
                         messages = [] 
                         chat_name = entity.title if hasattr(entity, "title") else entity.first_name
-                        unread_count = result.dialogs[0].unread_count
 
                         if hasattr(entity, "title"):
                             user_mappings = {} 
-                            async for message in client.iter_messages(entity,limit=unread_count): 
+
+                            async for message in client.iter_messages(entity,limit=unread_count, reply_to=chat[1]): 
                                 user_id = message.from_id.user_id
 
                                 if user_id not in user_mappings:

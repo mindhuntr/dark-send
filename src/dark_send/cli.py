@@ -4,7 +4,6 @@ from dark_send.progress_bar import progress
 from argparse import ArgumentParser
 from rich.console import Console 
 from rich.panel import Panel
-from rich.rule import Rule
 from os import path
 import subprocess
 import asyncio 
