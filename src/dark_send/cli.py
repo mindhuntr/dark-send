@@ -254,17 +254,19 @@ async def cli(args):
         COLORS = ["cyan", "magenta", "green", "yellow", "blue"]
         color_map = {name: COLORS[i % len(COLORS)] for i, name in enumerate(senders)}
 
-        if "error" not in messages:
-            for chat, dialog in messages.items(): 
-                if not len(dialog) == 0:  
-                    console.print(f"──── [green]{chat}[/green] ─────")
-                for message in dialog[::-1]: 
-                    (name, text), = message.items()
-                    console.print(
-                      Panel(text, title=name, title_align="left", expand=False, style=color_map[name])
-                    )
+        for chat, dialog in messages.items(): 
+            if len(dialog) == 0:  
+                console.print(f"[green]{chat}[/green] - No unread messages")
+                continue
 
-                print("")
+            console.print(f"──── [green]{chat}[/green] ─────")
+            for message in dialog[::-1]: 
+                (name, text), = message.items()
+                console.print(
+                  Panel(text, title=name, title_align="left", expand=False, style=color_map[name])
+                )
+
+            print("")
 
     chat_path = path.join(path.dirname(path.expanduser(CONFIG_DIR)), "chats.json")
     chats = []
