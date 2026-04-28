@@ -65,206 +65,208 @@ async def daemonize():
                     else: 
                         client = user_client 
 
-                if cmd["type"] == "send_message":
-                    await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
+                match cmd["type"]: 
+                    case "send_message":
+                        await client.send_message(cmd["chat"], cmd["text"], reply_to=cmd["reply_to"])
 
-                elif cmd["type"] == "send_image": 
-                    if cmd["album"] == "no":
-                        if cmd["quiet"] == False: 
-                            image_handle = await client.upload_file(
-                                cmd["image"],
-                                progress_callback=upload_progress,
-                                part_size_kb=512)
-                        else: 
-                            image_handle = await client.upload_file(
-                                cmd["image"],
-                                part_size_kb=512)
-
-                        for chat in cmd["chats"]:
-                            await client.send_file( 
-                                chat[0], image_handle,
-                                reply_to=chat[1], caption=cmd["caption"],
-                                ) 
-
-                    else: 
-                        img_arr = []
-                        for image in cmd["image"]:
+                    case "send_image": 
+                        if cmd["album"] == "no":
                             if cmd["quiet"] == False: 
                                 image_handle = await client.upload_file(
-                                    image,
+                                    cmd["image"],
                                     progress_callback=upload_progress,
                                     part_size_kb=512)
                             else: 
                                 image_handle = await client.upload_file(
-                                    image,
+                                    cmd["image"],
                                     part_size_kb=512)
 
-                            img_arr.append(image_handle)
+                            for chat in cmd["chats"]:
+                                await client.send_file( 
+                                    chat[0], image_handle,
+                                    reply_to=chat[1], caption=cmd["caption"],
+                                    ) 
 
-                        for chat in cmd["chats"]:
-                            await client.send_file(
-                                chat[0], img_arr,
-                                reply_to=chat[1], 
-                                caption=cmd["caption"]
-                            )
-
-                elif cmd["type"] == "send_video":
-                    if cmd["album"] == "no":
-                        if cmd["quiet"] == False:
-                            video_handle = await client.upload_file(
-                                cmd["video"],
-                                progress_callback=upload_progress,
-                                part_size_kb=512)
                         else: 
-                            video_handle = await client.upload_file(
-                                cmd["video"],
-                                part_size_kb=512
-                            )
+                            img_arr = []
+                            for image in cmd["image"]:
+                                if cmd["quiet"] == False: 
+                                    image_handle = await client.upload_file(
+                                        image,
+                                        progress_callback=upload_progress,
+                                        part_size_kb=512)
+                                else: 
+                                    image_handle = await client.upload_file(
+                                        image,
+                                        part_size_kb=512)
 
-                        for chat in cmd["chats"]:
-                            await client.send_file(
-                                chat[0], video_handle,
-                                video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
-                                reply_to=chat[1], caption=cmd["caption"]
+                                img_arr.append(image_handle)
+
+                            for chat in cmd["chats"]:
+                                await client.send_file(
+                                    chat[0], img_arr,
+                                    reply_to=chat[1], 
+                                    caption=cmd["caption"]
                                 )
-                    else:
-                        video_arr = []
-                        for video in cmd["video"]:
+
+                    case "send_video":
+                        if cmd["album"] == "no":
                             if cmd["quiet"] == False:
                                 video_handle = await client.upload_file(
-                                    video,
+                                    cmd["video"],
                                     progress_callback=upload_progress,
                                     part_size_kb=512)
                             else: 
                                 video_handle = await client.upload_file(
-                                    video,
+                                    cmd["video"],
                                     part_size_kb=512
                                 )
-                            video_arr.append(video_handle) 
 
-                        for chat in cmd["chats"]:
-                            await client.send_file(
-                                chat[0], video_arr,
-                                video=True,reply_to=chat[1], 
-                                caption=cmd["caption"]
-                            )
+                            for chat in cmd["chats"]:
+                                await client.send_file(
+                                    chat[0], video_handle,
+                                    video=True, attributes=(DocumentAttributeVideo(cmd["duration"], cmd["width"], cmd["height"], supports_streaming=True),),
+                                    reply_to=chat[1], caption=cmd["caption"]
+                                    )
+                        else:
+                            video_arr = []
+                            for video in cmd["video"]:
+                                if cmd["quiet"] == False:
+                                    video_handle = await client.upload_file(
+                                        video,
+                                        progress_callback=upload_progress,
+                                        part_size_kb=512)
+                                else: 
+                                    video_handle = await client.upload_file(
+                                        video,
+                                        part_size_kb=512
+                                    )
+                                video_arr.append(video_handle) 
+
+                            for chat in cmd["chats"]:
+                                await client.send_file(
+                                    chat[0], video_arr,
+                                    video=True,reply_to=chat[1], 
+                                    caption=cmd["caption"]
+                                )
 
 
-                elif cmd["type"] == "send_file": 
-                    if cmd["album"] == "no":
-                        if cmd["quiet"] == False:
-                            file_handle = await client.upload_file(
-                                file=cmd["file"],
-                                file_name=cmd["file"], 
-                                progress_callback=upload_progress,
-                            )
-                        else: 
-                            file_handle = await client.upload_file(
-                                file=cmd["file"],
-                                file_name=cmd["file"], 
-                            )
-
-                        for chat in cmd["chats"]:
-                            await client.send_file( 
-                                chat[0], file_handle, 
-                                force_document=True,
-                                reply_to=chat[1],
-                                caption=cmd["caption"]
-                            ) 
-                    else: 
-                        file_arr = [] 
-                        for file in cmd["file"]: 
+                    case "send_file": 
+                        if cmd["album"] == "no":
                             if cmd["quiet"] == False:
                                 file_handle = await client.upload_file(
-                                    file=file,
-                                    file_name=file, 
+                                    file=cmd["file"],
+                                    file_name=cmd["file"], 
                                     progress_callback=upload_progress,
                                 )
-                                file_arr.append(file_handle)
                             else: 
                                 file_handle = await client.upload_file(
-                                    file=file,
-                                    file_name=file, 
+                                    file=cmd["file"],
+                                    file_name=cmd["file"], 
                                 )
-                                file_arr.append(file_handle)
+
+                            for chat in cmd["chats"]:
+                                await client.send_file( 
+                                    chat[0], file_handle, 
+                                    force_document=True,
+                                    reply_to=chat[1],
+                                    caption=cmd["caption"]
+                                ) 
+                        else: 
+                            file_arr = [] 
+                            for file in cmd["file"]: 
+                                if cmd["quiet"] == False:
+                                    file_handle = await client.upload_file(
+                                        file=file,
+                                        file_name=file, 
+                                        progress_callback=upload_progress,
+                                    )
+                                    file_arr.append(file_handle)
+                                else: 
+                                    file_handle = await client.upload_file(
+                                        file=file,
+                                        file_name=file, 
+                                    )
+                                    file_arr.append(file_handle)
+
+                            for chat in cmd["chats"]:
+                                await client.send_file( 
+                                    chat[0], file_arr, 
+                                    force_document=True,
+                                    reply_to=chat[1],
+                                    caption=cmd["caption"]
+                                ) 
+
+                    case "get_chats": 
+                        if cmd["client"] == "user":
+                            chat_list = {}
+                            async for dialog in client.iter_dialogs(100):
+                                if hasattr(dialog.entity, "deactivated"): 
+                                    if dialog.entity.deactivated: 
+                                        continue
+
+                                if not hasattr(dialog.entity, "forum"):
+                                    chat_list[dialog.name] = dialog.id
+                                else:
+                                    if dialog.entity.forum:
+                                        topic_obj = await client(GetForumTopicsRequest(
+                                            peer=dialog.id, offset_date=datetime.now(),
+                                            offset_id=1, offset_topic=1, limit=100))
+
+                                        topics = [{topic.title: topic.id} for topic in topic_obj.topics]
+                                        chat_list[dialog.name] = [dialog.id, topics]
+                                    else:
+                                        chat_list[dialog.name] = dialog.id
+
+                            server.relay_to_client(conn, chat_list) 
+
+                    case "get_bots": 
+                        bot_list = {}
+                        for index, section in enumerate(bot_sections, start=1):
+                            bot_list[index] = section 
+
+                        server.relay_to_client(conn, bot_list) 
+
+                    case "unread_messages": 
+                        all_messages = {} 
 
                         for chat in cmd["chats"]:
-                            await client.send_file( 
-                                chat[0], file_arr, 
-                                force_document=True,
-                                reply_to=chat[1],
-                                caption=cmd["caption"]
-                            ) 
+                            entity = await client.get_entity(chat[0]) 
 
-                elif cmd["type"] == "get_chats" and cmd["client"] == "user":
-                    chat_list = {}
-                    async for dialog in client.iter_dialogs(100):
-                        if hasattr(dialog.entity, "deactivated"): 
-                            if dialog.entity.deactivated: 
-                                continue
-
-                        if not hasattr(dialog.entity, "forum"):
-                            chat_list[dialog.name] = dialog.id
-                        else:
-                            if dialog.entity.forum:
-                                topic_obj = await client(GetForumTopicsRequest(
-                                    peer=dialog.id, offset_date=datetime.now(),
-                                    offset_id=1, offset_topic=1, limit=100))
-
-                                topics = [{topic.title: topic.id} for topic in topic_obj.topics]
-                                chat_list[dialog.name] = [dialog.id, topics]
+                            if chat[1]: 
+                                result = await client(GetForumTopicsByIDRequest( 
+                                    peer=chat[0], 
+                                    topics=[chat[1]],
+                                ))
+                                unread_count = result.topics[0].unread_count
                             else:
-                                chat_list[dialog.name] = dialog.id
+                                result = await client(GetPeerDialogsRequest(
+                                    peers=[entity]
+                                ))
+                                unread_count = result.dialogs[0].unread_count
 
-                    server.relay_to_client(conn, chat_list) 
+                            messages = [] 
+                            chat_name = entity.title if hasattr(entity, "title") else entity.first_name
 
-                elif cmd["type"] == "get_bots": 
-                    bot_list = {}
-                    for index, section in enumerate(bot_sections, start=1):
-                        bot_list[index] = section 
+                            if hasattr(entity, "title"):
+                                user_mappings = {} 
 
-                    server.relay_to_client(conn, bot_list) 
+                                async for message in client.iter_messages(entity,limit=unread_count, reply_to=chat[1]): 
+                                    user_id = message.from_id.user_id
 
-                elif cmd["type"] == "unread_messages": 
-                    all_messages = {} 
+                                    if user_id not in user_mappings:
+                                        entity = await client.get_entity(user_id)
+                                        user_mappings[user_id] = entity.first_name
 
-                    for chat in cmd["chats"]:
-                        entity = await client.get_entity(chat[0]) 
+                                    messages.append({ user_mappings[user_id]: message.message })
 
-                        if chat[1]: 
-                            result = await client(GetForumTopicsByIDRequest( 
-                                peer=chat[0], 
-                                topics=[chat[1]],
-                            ))
-                            unread_count = result.topics[0].unread_count
-                        else:
-                            result = await client(GetPeerDialogsRequest(
-                                peers=[entity]
-                            ))
-                            unread_count = result.dialogs[0].unread_count
+                            else:
+                                async for message in client.iter_messages(entity,limit=unread_count): 
+                                    messages.append({ chat_name: message.message })
 
-                        messages = [] 
-                        chat_name = entity.title if hasattr(entity, "title") else entity.first_name
+                            all_messages[chat_name] = messages
 
-                        if hasattr(entity, "title"):
-                            user_mappings = {} 
-
-                            async for message in client.iter_messages(entity,limit=unread_count, reply_to=chat[1]): 
-                                user_id = message.from_id.user_id
-
-                                if user_id not in user_mappings:
-                                    entity = await client.get_entity(user_id)
-                                    user_mappings[user_id] = entity.first_name
-
-                                messages.append({ user_mappings[user_id]: message.message })
-
-                        else:
-                            async for message in client.iter_messages(entity,limit=unread_count): 
-                                messages.append({ chat_name: message.message })
-
-                        all_messages[chat_name] = messages
-
-                    server.relay_to_client(conn, all_messages)
+                        server.relay_to_client(conn, all_messages)
 
             except Exception as e:
                 server.relay_to_client(conn, {"error": "query failed"})
